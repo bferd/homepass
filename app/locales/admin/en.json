@@ -224,6 +224,8 @@
   "timing.uses": "Uses",
   "timing.valid_until": "Valid until",
   "timing.single_use_detail": "A use is one control the guest presses. Opening the link does not count — nor does a chat app loading it to show a preview. A link with only cameras and sensors on it is never used up.",
+  "timing.show_remaining": "Show remaining uses to the guest",
+  "timing.show_remaining_hint": "Keeps a \"N uses left\" counter on the guest page.",
   "timing.starts": "Starts",
   "timing.blank_now": "(blank = now)",
   "timing.ends": "Ends",

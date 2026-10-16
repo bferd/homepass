@@ -196,3 +196,68 @@ async def test_extending_a_link_with_uses_left_keeps_the_count(
         cookies=admin_session,
     )
     assert resp.json()["use_count"] == 1
+
+
+# --- show_remaining_uses: the guest-page counter ---------------------------
+
+async def _page(client, slug):
+    return await client.get(f"/g/{slug}")
+
+
+async def test_counter_is_off_by_default(client, test_db, mock_ha_client):
+    await _make_token(slug="quiet", max_uses=3)
+    r = await _page(client, "quiet")
+    assert r.status_code == 200
+    assert 'id="uses-left"' not in r.text
+
+
+async def test_counter_shows_when_enabled(client, test_db, mock_ha_client):
+    await db.create_token(
+        label="Counted", slug="counted", entity_ids=["light.living_room"],
+        expires_at=int(time.time()) + 86400, ip_allowlist=None,
+        max_uses=3, show_remaining_uses=True,
+    )
+    r = await _page(client, "counted")
+    assert r.status_code == 200
+    assert 'id="uses-left"' in r.text
+    assert 'data-uses="3"' in r.text
+
+
+async def test_counter_ignored_without_a_use_limit(client, test_db, mock_ha_client):
+    await db.create_token(
+        label="Unlimited", slug="unlimited", entity_ids=["light.living_room"],
+        expires_at=int(time.time()) + 86400, ip_allowlist=None,
+        max_uses=None, show_remaining_uses=True,
+    )
+    r = await _page(client, "unlimited")
+    assert 'id="uses-left"' not in r.text
+
+
+async def test_counter_tracks_spent_uses(client, test_db, mock_ha_client):
+    await db.create_token(
+        label="Counted", slug="tracked", entity_ids=["light.living_room"],
+        expires_at=int(time.time()) + 86400, ip_allowlist=None,
+        max_uses=3, show_remaining_uses=True,
+    )
+    row = await db.get_token_by_slug("tracked")
+    assert await db.consume_token_use(row["id"])
+    r = await _page(client, "tracked")
+    assert 'data-uses="2"' in r.text
+
+
+async def test_schedule_none_keeps_the_choice(test_db):
+    t = await db.create_token(
+        label="Keep", slug="keep", entity_ids=["light.living_room"],
+        expires_at=int(time.time()) + 86400, ip_allowlist=None,
+        max_uses=2, show_remaining_uses=True,
+    )
+    await db.update_token_schedule(
+        t["id"], starts_at=None, expires_at=int(time.time()) + 90000,
+        access_windows=None, max_uses=2,
+    )
+    assert (await db.get_token_by_id(t["id"]))["show_remaining_uses"] == 1
+    await db.update_token_schedule(
+        t["id"], starts_at=None, expires_at=int(time.time()) + 90000,
+        access_windows=None, max_uses=2, show_remaining_uses=False,
+    )
+    assert (await db.get_token_by_id(t["id"]))["show_remaining_uses"] == 0

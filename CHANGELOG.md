@@ -9,6 +9,12 @@ HomePass is a fork of [Rohithkadaveru/ha-pass](https://github.com/Rohithkadaveru
 unmaintained upstream since April 2026. Releases up to and including 0.2.4 are
 upstream's; 0.3.0 is the first release from this fork.
 
+## [Unreleased]
+
+### Added
+
+- **Show remaining uses.** A use-limited link can now keep a "N uses left" counter on the guest page. Turn on **Show remaining uses to the guest** when creating the link or under **Schedule**. It is off by default, so existing links look the same, and it has no effect on links without a use limit. Adds a database migration (013) and a `show_remaining_uses` field to the admin and public APIs.
+
 ## [1.1.1] - 2026-09-30
 
 ### Fixed
