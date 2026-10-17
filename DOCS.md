@@ -86,7 +86,7 @@ These belong to the link, not the entity. The same light can be on/off for the c
 
 When creating a link, choose one of three modes under **Access**:
 
-- **Single use** — the link stops working once it has been used (set **Uses** above 1 for a few uses). A use is one control the guest presses and Home Assistant accepts. Opening the link does not count, and neither does a chat app such as WhatsApp loading it to draw a preview card, so sending the link cannot use it up. A failed command does not count either. A link with only cameras and sensors on it is never used up. **Valid until** is optional.
+- **Single use** — the link stops working once it has been used (set **Uses** above 1 for a few uses). A use is one control the guest presses and Home Assistant accepts. Opening the link does not count, and neither does a chat app such as WhatsApp loading it to draw a preview card, so sending the link cannot use it up. A failed command does not count either. A link with only cameras and sensors on it is never used up. **Valid until** is optional. Tick **Show remaining uses to the guest** to keep a counter on the guest page showing how many uses are left. Without it, the guest only sees the count in a short message after each use.
 - **No expiry** — works until you revoke it.
 - **Set a period** — works from **Starts** to **Ends**. Leave the start blank to start now. The quick buttons (+1 day, +7 days, …) set the end relative to the start.
 

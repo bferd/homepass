@@ -229,6 +229,7 @@ def _row_to_response(row: Any, entity_ids: list[str] | None = None,
         "uses_remaining": (
             max(0, row["max_uses"] - row["use_count"]) if row["max_uses"] is not None else None
         ),
+        "show_remaining_uses": bool(row["show_remaining_uses"]),
         "remember_pin": bool(row["remember_pin"]),
         # Whether the link is locked to one device, and when that device
         # claimed it (None while unclaimed). The claim's secret hash never
@@ -322,6 +323,7 @@ async def _create_token(body: TokenCreateRequest, expires_at: int | None = None)
         remember_pin=body.remember_pin,
         device_binding=body.device_binding,
         country_allowlist=countries,
+        show_remaining_uses=body.show_remaining_uses,
     )
     entity_ids = await db.get_token_entities(row["id"])
     return _row_to_response(row, entity_ids)
@@ -559,6 +561,7 @@ async def update_token_schedule(
         access_windows=_windows_or_none(body.access_windows),
         max_uses=body.max_uses,
         reset_uses=body.reset_uses,
+        show_remaining_uses=body.show_remaining_uses,
     )
     await ha_client.broadcast_schedule_changed(token_id)
     row = await db.get_token_by_id(token_id)

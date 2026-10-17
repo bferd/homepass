@@ -103,6 +103,7 @@ async def create_token(
     remember_pin: bool = True,
     device_binding: bool = False,
     country_allowlist: list[str] | None = None,
+    show_remaining_uses: bool = False,
 ) -> dict[str, Any]:
     db = await get_db()
     token_id = str(uuid.uuid4())
@@ -119,11 +120,12 @@ async def create_token(
         await db.execute(
             """INSERT INTO tokens
                (id, slug, label, created_at, starts_at, expires_at, ip_allowlist, pin_hash,
-                access_windows, max_uses, remember_pin, device_binding, country_allowlist)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                access_windows, max_uses, remember_pin, device_binding, country_allowlist,
+                show_remaining_uses)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (token_id, slug, label, now, starts_at, expires_at, ip_json, pin_hash,
              windows_json, max_uses, int(bool(remember_pin)), int(bool(device_binding)),
-             country_json),
+             country_json, int(bool(show_remaining_uses))),
         )
         if entity_ids:
             meta = entity_meta or {}
@@ -471,6 +473,7 @@ async def update_token_schedule(
     access_windows: list[dict[str, Any]] | None,
     max_uses: int | None,
     reset_uses: bool = False,
+    show_remaining_uses: bool | None = None,
 ) -> None:
     """Replace every timing field on a token in one write.
 
@@ -479,10 +482,16 @@ async def update_token_schedule(
     """
     db = await get_db()
     windows_json = json.dumps(access_windows) if access_windows else None
+    # None leaves the stored choice alone, so an older API client that never
+    # heard of the setting cannot switch it off by omission.
     await db.execute(
         "UPDATE tokens SET starts_at = ?, expires_at = ?, access_windows = ?, max_uses = ?, "
-        "use_count = CASE WHEN ? THEN 0 ELSE use_count END WHERE id = ?",
-        (starts_at, expires_at, windows_json, max_uses, int(reset_uses), token_id),
+        "use_count = CASE WHEN ? THEN 0 ELSE use_count END, "
+        "show_remaining_uses = CASE WHEN ? IS NULL THEN show_remaining_uses ELSE ? END "
+        "WHERE id = ?",
+        (starts_at, expires_at, windows_json, max_uses, int(reset_uses),
+         None if show_remaining_uses is None else int(show_remaining_uses),
+         None if show_remaining_uses is None else int(show_remaining_uses), token_id),
     )
     await db.commit()
 

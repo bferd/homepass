@@ -372,6 +372,7 @@ async def duplicate_token(token_id: str, body: ApiTokenDuplicateRequest | None =
         max_uses=row["max_uses"],
         remember_pin=bool(row["remember_pin"]),
         device_binding=bool(row["device_binding"]),
+        show_remaining_uses=bool(row["show_remaining_uses"]),
         country_allowlist=(
             json.loads(row["country_allowlist"]) if row["country_allowlist"] else None
         ),

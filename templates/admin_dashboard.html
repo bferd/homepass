@@ -1423,6 +1423,11 @@ function timingFormHtml(p) {
         </div>
       </div>
       <p class="text-xs text-muted">${esc(tr('timing.single_use_detail'))}</p>
+      <label class="flex items-center gap-2.5 cursor-pointer">
+        <input id="${p}-show-remaining" type="checkbox" class="w-4 h-4 rounded border-border-light dark:border-border-dark accent-primary">
+        <span class="text-sm">${esc(tr('timing.show_remaining'))}</span>
+      </label>
+      <p class="text-[11px] text-muted ml-6.5">${esc(tr('timing.show_remaining_hint'))}</p>
     </div>
     <p id="${p}-never-fields" class="hidden text-xs text-amber-600 dark:text-amber-400 mt-2">${esc(tr('timing.never_warn'))}</p>
     <div id="${p}-period-fields" class="hidden space-y-2 mt-3">
@@ -1554,7 +1559,7 @@ function timingPresetFromToken(token, nowMs, forDuplicate) {
     : token.expires_at >= NEVER_EXPIRES ? 'never'
     : 'period';
   const never = token.expires_at >= NEVER_EXPIRES;
-  const preset = { mode, uses: token.max_uses || 1, windows, advanced: windows.length > 0, start: '', end: '', singleEnd: '' };
+  const preset = { mode, uses: token.max_uses || 1, showRemaining: !!token.show_remaining_uses, windows, advanced: windows.length > 0, start: '', end: '', singleEnd: '' };
   if (forDuplicate) {
     const began = token.starts_at || token.created_at;
     const length = Math.max(3600, token.expires_at - began);
@@ -1577,6 +1582,7 @@ function setTimingForm(p, preset = {}) {
   timingWindows[p] = (preset.windows || []).map(w => ({ ...w, weekdays: [...w.weekdays] }));
   renderWindows(p);
   document.getElementById(`${p}-uses`).value = String(preset.uses || 1);
+  document.getElementById(`${p}-show-remaining`).checked = !!preset.showRemaining;
   document.getElementById(`${p}-single-end`).value = preset.singleEnd || '';
   document.getElementById(`${p}-start`).value = preset.start || '';
   document.getElementById(`${p}-end`).value = preset.end || toLocalInput(Date.now() / 1000 + 86400);
@@ -1691,7 +1697,12 @@ async function submitSchedule() {
   const r = await fetch(`${BASE}/admin/tokens/${scheduleTokenId}/schedule`, {
     method: 'PATCH',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ ...timing.body, reset_uses: document.getElementById('s-reset-uses').checked }),
+    body: JSON.stringify({
+      ...timing.body,
+      reset_uses: document.getElementById('s-reset-uses').checked,
+      show_remaining_uses: timing.body.max_uses != null
+        && document.getElementById('s-show-remaining').checked,
+    }),
   });
   if (r.ok) {
     closeScheduleModal();
@@ -1769,6 +1780,8 @@ async function submitCreate() {
     pin,
     remember_pin: document.getElementById('f-remember-pin').checked,
     device_binding: document.getElementById('f-device-binding').checked,
+    show_remaining_uses: timing.body.max_uses != null
+      && document.getElementById('f-show-remaining').checked,
   };
 
     const r = await fetch(`${BASE}/admin/tokens`, {

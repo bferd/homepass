@@ -999,6 +999,14 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
         # the domains, and so the icons, grouping and order; the overrides give
         # the names the admin chose. No Home Assistant state is read here, and
         # none is reachable from the page until it reloads as an active one.
+        # Only set when the admin turned the counter on AND the link has a use
+        # limit; None means the page draws no counter at all. Never set on a
+        # pending page: it can command nothing, so nothing is being counted.
+        "uses_remaining": (
+            max(0, row["max_uses"] - row["use_count"])
+            if row["show_remaining_uses"] and row["max_uses"] is not None and not pending
+            else None
+        ),
         "preview_entity_ids": await db.get_token_entities(row["id"]) if pending else [],
         "preview_entity_meta": await db.get_token_entity_meta(row["id"]) if pending else {},
     })

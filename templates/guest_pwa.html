@@ -171,6 +171,20 @@
   </div>
 </header>
 
+{# Persistent use counter. Rendered only when the admin switched it on for a
+   use-limited link (uses_remaining is None otherwise). The text is filled in by
+   renderUsesLeft() so it shares the plural rules of the toast, and is refreshed
+   after every command from the server's own count. #}
+{% if uses_remaining is not none %}
+<div class="max-w-xl mx-auto px-4 pt-3">
+  <div id="uses-left" data-uses="{{ uses_remaining }}" role="status" aria-live="polite"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono bg-accent/15 text-accent">
+    <span aria-hidden="true" class="material-symbols-outlined text-[14px]">touch_app</span>
+    <span id="uses-left-text"></span>
+  </div>
+</div>
+{% endif %}
+
 <!-- Install banner (shown only on mobile browsers, not in standalone mode) -->
 <div id="install-banner" class="hidden max-w-xl mx-auto px-4 pt-3">
   <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 shadow-card border border-border-light dark:border-border-dark flex items-start gap-3">
@@ -1764,12 +1778,31 @@ async function sendCmd(entityId, domain, service, extraData = {}) {
     const result = await r.json().catch(() => ({}));
     if (result.uses_remaining === 0) showExpired('used');
     else if (typeof result.uses_remaining === 'number') {
+      renderUsesLeft(result.uses_remaining);
       showToast(trn('command.uses_left', result.uses_remaining));
     }
   } catch {
     showToast(tr('command.offline'));
   }
 }
+
+// The persistent counter exists only when the admin enabled it for this link,
+// so every other page finds no element and does nothing.
+function renderUsesLeft(n) {
+  const box = document.getElementById('uses-left');
+  const text = document.getElementById('uses-left-text');
+  if (!box || !text) return;
+  box.dataset.uses = String(n);
+  text.textContent = trn('command.uses_left', n);
+}
+(function initUsesLeft() {
+  const run = () => {
+    const box = document.getElementById('uses-left');
+    if (box) renderUsesLeft(Number(box.dataset.uses));
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
 
 function sendToggle(eid, domain) {
   const newState = states[eid]?.state === 'on' ? 'turn_off' : 'turn_on';

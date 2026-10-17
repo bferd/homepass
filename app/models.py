@@ -223,6 +223,9 @@ class TokenCreateRequest(BaseModel):
     )
     # None is unlimited. See guest_command for what a use is.
     max_uses: int | None = Field(default=None, ge=1, le=MAX_USES_CAP)
+    # Keep a "N uses left" counter on the guest page. Only means anything with
+    # max_uses set. Off by default, which is how every link behaved before.
+    show_remaining_uses: bool = False
     # Deliberately unconstrained here and validated in the router instead: a
     # Field(pattern=...) rejection becomes a 422 whose body echoes the offending
     # `input` back, which for this one field would put the PIN in a response.
@@ -323,6 +326,8 @@ class TokenScheduleRequest(BaseModel):
     )
     max_uses: int | None = Field(default=None, ge=1, le=MAX_USES_CAP)
     reset_uses: bool = False
+    # None keeps the stored choice; True/False replaces it.
+    show_remaining_uses: bool | None = None
 
 
 # Template names come from the admin and are rendered back into the picker, so
@@ -503,6 +508,7 @@ class ApiTokenResponse(BaseModel):
     max_uses: int | None
     use_count: int
     uses_remaining: int | None
+    show_remaining_uses: bool
     country_allowlist: list[str] | None
     device_binding: bool
     device_bound_at: int | None

@@ -224,6 +224,8 @@
   "timing.uses": "Usos",
   "timing.valid_until": "Válido hasta",
   "timing.single_use_detail": "Un uso es un control que el invitado pulsa. Abrir el enlace no cuenta, ni tampoco que una app de mensajería lo cargue para mostrar una vista previa. Un enlace con solo cámaras y sensores nunca se agota.",
+  "timing.show_remaining": "Mostrar los usos restantes al invitado",
+  "timing.show_remaining_hint": "Mantiene un contador de \"usos restantes\" en la página del invitado.",
   "timing.starts": "Empieza",
   "timing.blank_now": "(vacío = ahora)",
   "timing.ends": "Termina",
