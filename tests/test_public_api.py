@@ -391,6 +391,25 @@ async def test_patch_expiry_does_not_unrevoke(client, mock_ha_client, test_db, a
     assert resp.json()["revoked"] is True
 
 
+async def test_patch_show_remaining_uses(client, mock_ha_client, test_db, api_on):
+    token = await _create(client, max_uses=3)
+    assert token["show_remaining_uses"] is False
+    url = f"/api/v1/tokens/{token['id']}"
+
+    resp = await client.patch(url, json={"show_remaining_uses": True}, headers=HEADERS)
+    assert resp.status_code == 200
+    assert resp.json()["show_remaining_uses"] is True
+    # Open guest pages draw the counter at load, so they are told to reload.
+    mock_ha_client["broadcast_schedule_changed"].assert_awaited_with(token["id"])
+
+    # Absent leaves it alone.
+    resp = await client.patch(url, json={"label": "Other"}, headers=HEADERS)
+    assert resp.json()["show_remaining_uses"] is True
+
+    resp = await client.patch(url, json={"show_remaining_uses": False}, headers=HEADERS)
+    assert resp.json()["show_remaining_uses"] is False
+
+
 # ---------------------------------------------------------------------------
 # Lifecycle actions
 # ---------------------------------------------------------------------------
@@ -630,3 +649,11 @@ def test_schema_body_models_do_not_constrain_the_pin():
     for model in (ApiTokenCreateRequest, ApiTokenUpdateRequest, ApiTokenDuplicateRequest):
         assert model.model_fields["pin"].metadata == []
     json.dumps(ApiTokenCreateRequest.model_json_schema())  # schema builds
+
+
+async def test_duplicate_copies_show_remaining_uses(client, mock_ha_client, test_db, api_on):
+    source = await _create(client, max_uses=2, show_remaining_uses=True)
+    assert source["show_remaining_uses"] is True
+    resp = await client.post(f"/api/v1/tokens/{source['id']}/duplicate", headers=HEADERS)
+    assert resp.status_code == 201
+    assert resp.json()["show_remaining_uses"] is True

@@ -525,8 +525,8 @@ curl -X POST -H "X-API-Key: $HOMEPASS_API_TOKEN" -H "Content-Type: application/j
 ```
 
 Endpoints under `/api/v1/tokens`: list, create, get, `PATCH` (label, entities,
-expiry, PIN, `remember_pin`, `device_binding`), `DELETE`, `PUT .../{id}/schedule`
-(start, end, weekly windows, use limit), `POST .../{id}/revoke`, `renew`,
+expiry, PIN, `remember_pin`, `device_binding`, `show_remaining_uses`), `DELETE`,
+`PUT .../{id}/schedule` (start, end, weekly windows, use limit), `POST .../{id}/revoke`, `renew`,
 `activate`, `rotate-slug`, `duplicate` and `unbind`, and
 `.../{id}/access-codes` (list, create, `{code_id}/rotate`, `DELETE {code_id}`)
 for links without PIN. Create accepts every field the dashboard sets, and

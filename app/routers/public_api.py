@@ -168,8 +168,8 @@ async def get_token(token_id: str) -> dict:
 
 @router.patch("/tokens/{token_id}", response_model=ApiTokenResponse)
 async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
-    """Change any of label, entities, expiry, PIN, remember-PIN and the
-    device lock in one call.
+    """Change any of label, entities, expiry, PIN, remember-PIN, the
+    device lock and the remaining-uses counter in one call.
 
     Everything is validated before anything is written, so a bad PIN does not
     leave the entity list changed. The expiry change leaves a revocation in
@@ -215,16 +215,24 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
         await admin.update_device_binding(
             token_id, TokenDeviceBindingRequest(enabled=body.device_binding), _=API_PRINCIPAL
         )
+    if body.show_remaining_uses is not None:
+        await db.set_show_remaining_uses(token_id, body.show_remaining_uses)
+        # Open guest pages draw the counter at load; reload them so it
+        # appears or goes away now, as it does after the dashboard's Schedule.
+        await ha_client.broadcast_schedule_changed(token_id)
     return await _full_token(token_id)
 
 
 @router.put("/tokens/{token_id}/schedule", response_model=ApiTokenResponse)
 async def replace_schedule(token_id: str, body: TokenScheduleRequest) -> dict:
     """Replace the token's timing: `starts_at`, an absolute `expires_at`,
-    `access_windows` and `max_uses`, plus `reset_uses`.
+    `access_windows` and `max_uses`, plus `reset_uses` and
+    `show_remaining_uses`.
 
     A full replacement — an omitted field takes its default, so leaving out
-    `access_windows` clears them. Open guest tabs are told to re-check.
+    `access_windows` clears them. The one exception is `show_remaining_uses`:
+    leaving it out keeps the stored setting. Open guest tabs are told to
+    re-check.
     """
     await admin.update_token_schedule(token_id, body, _=API_PRINCIPAL)
     return await _full_token(token_id)

@@ -435,6 +435,8 @@ class ApiTokenUpdateRequest(BaseModel):
     # the current value — the common "send the whole object back" client —
     # must not quietly lock the guest's own phone out of their link.
     device_binding: bool | None = None
+    # Same effect as the "Show remaining uses to the guest" checkbox.
+    show_remaining_uses: bool | None = None
 
 
 class ApiTokenRenewRequest(BaseModel):
