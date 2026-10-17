@@ -261,3 +261,26 @@ async def test_schedule_none_keeps_the_choice(test_db):
         access_windows=None, max_uses=2, show_remaining_uses=False,
     )
     assert (await db.get_token_by_id(t["id"]))["show_remaining_uses"] == 0
+
+
+async def test_counter_hidden_on_a_pending_page(client, test_db, mock_ha_client):
+    """A link that has not started can command nothing, so it shows no count."""
+    await db.create_token(
+        label="Later", slug="later", entity_ids=["light.living_room"],
+        starts_at=int(time.time()) + 3600, expires_at=int(time.time()) + 86400,
+        ip_allowlist=None, max_uses=3, show_remaining_uses=True,
+    )
+    r = await _page(client, "later")
+    assert r.status_code == 200
+    assert 'id="uses-left"' not in r.text
+
+
+async def test_admin_create_stores_and_returns_the_choice(client, admin_session, mock_ha_client):
+    resp = await client.post("/admin/tokens", json={
+        "label": "Courier", "entity_ids": ["light.living_room"],
+        "expires_in_seconds": 86400, "max_uses": 2, "show_remaining_uses": True,
+    }, cookies=admin_session)
+    assert resp.status_code == 201
+    assert resp.json()["show_remaining_uses"] is True
+    listed = (await client.get("/admin/tokens", cookies=admin_session)).json()
+    assert listed[0]["show_remaining_uses"] is True

@@ -487,11 +487,20 @@ async def update_token_schedule(
     await db.execute(
         "UPDATE tokens SET starts_at = ?, expires_at = ?, access_windows = ?, max_uses = ?, "
         "use_count = CASE WHEN ? THEN 0 ELSE use_count END, "
-        "show_remaining_uses = CASE WHEN ? IS NULL THEN show_remaining_uses ELSE ? END "
+        "show_remaining_uses = COALESCE(?, show_remaining_uses) "
         "WHERE id = ?",
         (starts_at, expires_at, windows_json, max_uses, int(reset_uses),
-         None if show_remaining_uses is None else int(show_remaining_uses),
          None if show_remaining_uses is None else int(show_remaining_uses), token_id),
+    )
+    await db.commit()
+
+
+async def set_show_remaining_uses(token_id: str, enabled: bool) -> None:
+    """Turn the guest page's "N uses left" counter on or off for one token."""
+    db = await get_db()
+    await db.execute(
+        "UPDATE tokens SET show_remaining_uses = ? WHERE id = ?",
+        (int(bool(enabled)), token_id),
     )
     await db.commit()
 
