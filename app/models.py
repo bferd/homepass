@@ -4,6 +4,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.region import valid_region
+
 NEVER_EXPIRES_SECONDS = 4102444800  # 2099-12-31T00:00:00Z
 
 # Services guests are permitted to call, keyed by entity domain.
@@ -195,6 +197,29 @@ class AccessWindow(BaseModel):
         return self
 
 
+# Text an admin writes for guests: the global welcome text and a link's own
+# info text, with a few formatting tags allowed (app/richtext.py). Capped like
+# every other admin text that reaches a guest page; the cap counts the text as
+# typed, tags included.
+INFO_TEXT_MAX = 1000
+
+
+def clean_info_text(value: Any) -> Any:
+    """Trim the text and give it one kind of line ending.
+
+    Run as a mode="before" validator, so a field's max_length counts the text
+    as it will be stored: a CRLF pasted from Windows must not use up two
+    characters of the limit per line. Whitespace-only becomes "", which these
+    fields read as "none". Tags are kept exactly as typed, never stripped
+    here: the text is sanitised on every render (app/richtext.py), so what is
+    stored is never trusted. Anything that is not a string is passed through for
+    the field's own type check to refuse.
+    """
+    if isinstance(value, str):
+        value = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+    return value
+
+
 class TokenCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=200)
     slug: str | None = Field(default=None, pattern=r"^[a-z0-9_-]{1,64}$")
@@ -240,6 +265,27 @@ class TokenCreateRequest(BaseModel):
     # checks them against the GeoIP database actually installed — a code that
     # database has no addresses for would lock every guest out.
     country_allowlist: list[str] | None = None
+    # Plain text shown to the guest on this link's page; "" is none. With
+    # info_text_in_footer it sits in a box below the controls instead of at
+    # the top with the welcome text.
+    info_text: str = Field(default="", max_length=INFO_TEXT_MAX)
+    info_text_in_footer: bool = False
+
+    _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
+
+
+class TokenInfoRequest(BaseModel):
+    """Change a link's info text and where it is shown, from the dashboard.
+
+    None keeps the stored value, the same convention as
+    TokenScheduleRequest.show_remaining_uses, so a client that only knows
+    about one of the two fields cannot reset the other by leaving it out. ""
+    is a value: it clears the text.
+    """
+    info_text: str | None = Field(default=None, max_length=INFO_TEXT_MAX)
+    info_text_in_footer: bool | None = None
+
+    _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
 
 
 class TokenRememberPinRequest(BaseModel):
@@ -437,6 +483,11 @@ class ApiTokenUpdateRequest(BaseModel):
     device_binding: bool | None = None
     # Same effect as the "Show remaining uses to the guest" checkbox.
     show_remaining_uses: bool | None = None
+    # Same as the dashboard's info dialog: None keeps, "" clears.
+    info_text: str | None = Field(default=None, max_length=INFO_TEXT_MAX)
+    info_text_in_footer: bool | None = None
+
+    _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
 
 
 class ApiTokenRenewRequest(BaseModel):
@@ -451,7 +502,8 @@ class ApiTokenDuplicateRequest(BaseModel):
 
     What is copied and what is not follows the dashboard's Duplicate: the
     entities, the IP and country allowlists, the weekly windows, the use limit
-    (with a fresh count), remember-PIN and the device-lock setting carry over;
+    (with a fresh count), remember-PIN, the device-lock setting, the info
+    text and where it is shown carry over;
     the slug, the PIN, the scheduled start, a device claim and links without
     PIN do not, because they belong to one guest's stay. With no expiry given,
     a never-expiring source gives a never-expiring copy and anything else gets
@@ -511,6 +563,8 @@ class ApiTokenResponse(BaseModel):
     use_count: int
     uses_remaining: int | None
     show_remaining_uses: bool
+    info_text: str
+    info_text_in_footer: bool
     country_allowlist: list[str] | None
     device_binding: bool
     device_bound_at: int | None
@@ -525,6 +579,7 @@ class ApiTokenResponse(BaseModel):
 # rather than trusted because it came from an admin.
 APP_NAME_MAX = 64
 CONTACT_MESSAGE_MAX = 500
+WELCOME_TEXT_MAX = INFO_TEXT_MAX
 GUEST_URL_MAX = 300
 RETENTION_DAYS_MAX = 3650
 HEX_COLOR_PATTERN = r"^#[0-9A-Fa-f]{6}$"
@@ -573,6 +628,8 @@ class SettingsUpdateRequest(BaseModel):
 
     app_name: str | None = Field(default=None, max_length=APP_NAME_MAX)
     contact_message: str | None = Field(default=None, max_length=CONTACT_MESSAGE_MAX)
+    welcome_text: str | None = Field(default=None, max_length=WELCOME_TEXT_MAX)
+    phone_region: str | None = None
     brand_bg: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
     brand_primary: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
     guest_url: str | None = Field(default=None, max_length=GUEST_URL_MAX)
@@ -589,6 +646,23 @@ class SettingsUpdateRequest(BaseModel):
         value = value.strip()
         if not value:
             raise ValueError("must not be blank")
+        return value
+
+    # Empty is allowed and means "show nothing", unlike the contact message.
+    # See clean_info_text for why this runs before the length check.
+    _clean_welcome_text = field_validator("welcome_text", mode="before")(clean_info_text)
+
+    # Blank is "work it out" (see app/region.py). Anything else must be a region
+    # libphonenumber can read numbers in, checked by the same rule the resolver
+    # uses, so a saved value can never be one it would silently skip.
+    @field_validator("phone_region")
+    @classmethod
+    def _phone_region(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        value = value.strip().upper()
+        if value and valid_region(value) is None:
+            raise ValueError("must be a two-letter country code, such as CA")
         return value
 
     @field_validator("brand_bg", "brand_primary")

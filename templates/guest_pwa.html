@@ -112,10 +112,61 @@
   .pwa #cards-container { padding-bottom: 4rem; }
   .pwa #sheet-backdrop > div { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom) + 0.5rem); }
   .pwa #expired-overlay { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
+  .pwa #info-footer { padding-bottom: 4rem; }
   @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(8px); } }
   .toast-in { animation: toastIn .25s ease-out; }
   .toast-out { animation: toastOut .2s ease-in forwards; }
+  /* The welcome and info text: the admin's own line breaks kept, and a long
+     URL broken anywhere rather than pushing the page sideways. The links in
+     it come from app/linkify.py as bare <a> tags, so they are styled here. */
+  .info-text { white-space: pre-line; overflow-wrap: anywhere; }
+  .info-text a { color: rgb(var(--color-primary)); text-decoration: underline; text-underline-offset: 2px; }
+  /* The formatting tags app/richtext.py lets through. Tailwind's preflight
+     strips headings, lists and bold of their look, so it is put back here,
+     sized for a card rather than a document. */
+  .info-text h1, .info-text h2, .info-text h3,
+  .info-text h4, .info-text h5, .info-text h6 { font-weight: 700; line-height: 1.3; margin: .375rem 0 .125rem; }
+  .info-text h1 { font-size: 1.25rem; }
+  .info-text h2 { font-size: 1.125rem; }
+  .info-text h3 { font-size: 1rem; }
+  .info-text h4 { font-size: .9375rem; }
+  .info-text h5 { font-size: .875rem; }
+  .info-text h6 { font-size: .875rem; font-weight: 600; }
+  .info-text > :first-child { margin-top: 0; }
+  .info-text b, .info-text strong { font-weight: 700; }
+  .info-text i, .info-text em { font-style: italic; }
+  .info-text u { text-decoration: underline; }
+  .info-text s { text-decoration: line-through; }
+  .info-text small { font-size: .8em; }
+  .info-text mark { background: #fde68a; color: #1c1917; border-radius: 2px; padding: 0 .125rem; }
+  .dark .info-text mark { background: #a16207; color: #fefce8; }
+  /* Line breaks typed between the items of a list are layout, not lines: the
+     list itself sets them, and the item's own text keeps its breaks. */
+  .info-text ul, .info-text ol { white-space: normal; margin: .25rem 0; padding-left: 1.25rem; }
+  .info-text ul { list-style: disc; }
+  .info-text ol { list-style: decimal; }
+  .info-text ul ul { list-style: circle; }
+  .info-text li { white-space: pre-line; }
+  /* The top card opens and shuts on a tap. Shut, it is one quiet line: the
+     first line of the text, rendered by the server with its formatting, with
+     the full text hidden. No transition, so nothing moves for a guest who asked
+     for reduced motion. */
+  .info-row { display: flex; align-items: flex-start; gap: .5rem; padding: .75rem .5rem .75rem 1rem; }
+  #info-card[data-collapsed="true"] .info-row { align-items: center; padding-top: .125rem; padding-bottom: .125rem; }
+  .info-line { display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #info-card[data-collapsed="true"] #info-card-text { display: none; }
+  #info-card[data-collapsed="true"] .info-line { display: block; }
+  /* The line can be a heading or a list item: it shares the card's .info-text
+     look, but every block in it stays on one line and ends in an ellipsis,
+     with no margins, and a list's bullet sits inside the line so it is never
+     clipped by the overflow. */
+  #info-card-line > *, #info-card-line li { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #info-card-line ul, #info-card-line ol { padding-left: 0; list-style-position: inside; }
+  .info-toggle { min-width: 44px; min-height: 44px; margin: -.5rem 0; }
+  #info-card[data-collapsed="true"] .info-toggle { margin: 0; }
+  #info-card[data-collapsed="false"] #info-more,
+  #info-card[data-collapsed="true"] #info-collapse { display: none; }
 </style>
 {% endblock %}
 
@@ -171,6 +222,79 @@
   </div>
 </header>
 
+{# The global welcome text and, unless it is flagged for the footer, this
+   link's info text. Built and sanitised by app/richtext.py; the server leaves it
+   out entirely when there is nothing to say. The text sits right against its
+   tags because the container keeps line breaks. #}
+{% if info_top_html %}
+<section id="info-card" data-info-hash="{{ info_top_hash }}" data-collapsed="false" aria-label="{{ t('page.info.label') }}" class="max-w-xl mx-auto px-4 pt-3">
+  <div class="info-row bg-surface-light dark:bg-surface-dark rounded-2xl shadow-card border border-border-light dark:border-border-dark">
+    <div id="info-card-text" class="info-text flex-1 min-w-0 text-sm leading-relaxed">{{ info_top_html }}</div>
+    {# Shown instead of the text while the card is shut: its first line,
+       formatted and linked like the card (built by app/richtext.py), or the
+       card's name when the text has tags and nothing to read. #}
+    <div id="info-card-line" class="info-text info-line flex-1 min-w-0 text-sm leading-relaxed">{{ info_top_line or t('page.info.label') }}</div>
+    {# Each button is only ever shown in one state, so its aria-expanded
+       never changes: Collapse is visible while the text is open, More while
+       it is shut. CSS picks which from data-collapsed. #}
+    <button type="button" id="info-collapse" data-action="info-collapse" aria-controls="info-card-text" aria-expanded="true"
+            class="info-toggle flex-shrink-0 inline-flex items-center justify-center gap-1 px-2 rounded-xl text-xs font-display font-medium text-muted hover:bg-soot/5 dark:hover:bg-white/5">
+      <span aria-hidden="true" class="material-symbols-outlined text-lg">expand_less</span>{{ t('page.info.collapse') }}
+    </button>
+    <button type="button" id="info-more" data-action="info-more" aria-controls="info-card-text" aria-expanded="false"
+            class="info-toggle flex-shrink-0 inline-flex items-center justify-center gap-1 px-2 rounded-xl text-xs font-display font-medium text-muted hover:bg-soot/5 dark:hover:bg-white/5">
+      <span aria-hidden="true" class="material-symbols-outlined text-lg">expand_more</span>{{ t('page.info.more') }}
+    </button>
+  </div>
+</section>
+{# Right after the card rather than in the page script at the bottom, so a
+   guest who collapsed the card earlier never sees it drawn open first: the
+   parser runs this before it reaches anything below, and before the page's
+   first paint. Tap only; nothing here waits on a timer. #}
+<script nonce="{{ csp_nonce }}">
+// Per link, never the token id: the slug is already in the address bar.
+const INFO_KEY = 'hp-info:' + {{ slug | tojson }};
+
+// localStorage can be missing or throw (private mode, storage blocked); the
+// card then still opens and shuts, it just forgets on the next visit.
+function infoStorage(use) {
+  try { return use(window.localStorage); } catch { return null; }
+}
+
+function setInfoCollapsed(collapsed, moveFocus) {
+  const card = document.getElementById('info-card');
+  card.dataset.collapsed = String(collapsed);
+  if (moveFocus) document.getElementById(collapsed ? 'info-more' : 'info-collapse').focus();
+}
+
+function collapseInfoCard() {
+  setInfoCollapsed(true, true);
+  const hash = document.getElementById('info-card').dataset.infoHash;
+  infoStorage(s => s.setItem(INFO_KEY, hash));
+}
+
+function expandInfoCard() {
+  setInfoCollapsed(false, true);
+  infoStorage(s => s.removeItem(INFO_KEY));
+}
+
+// The stored value is the hash of the text the guest shut. Edited text has a
+// new hash, so it opens again and the stale entry is dropped.
+function applyStoredInfoState() {
+  const stored = infoStorage(s => s.getItem(INFO_KEY));
+  if (stored == null) return;
+  if (stored === document.getElementById('info-card').dataset.infoHash) {
+    setInfoCollapsed(true, false);
+  } else {
+    setInfoCollapsed(false, false);
+    infoStorage(s => s.removeItem(INFO_KEY));
+  }
+}
+
+applyStoredInfoState();
+</script>
+{% endif %}
+
 {# Persistent use counter. Rendered only when the admin switched it on for a
    use-limited link (uses_remaining is None otherwise). The text is filled in by
    renderUsesLeft() so it shares the plural rules of the toast, and is refreshed
@@ -208,6 +332,17 @@
     <span class="text-sm">{{ t('page.devices.loading') }}</span>
   </div>
 </main>
+
+{# This link's info text when the admin moved it to the footer. A sibling of
+   <main>, never inside it: the script replaces everything in there. Never
+   rendered on a pending page, so it cannot sit under the pending banner. #}
+{% if info_footer_html %}
+<footer id="info-footer" aria-label="{{ t('page.info.label') }}" class="max-w-xl mx-auto px-4 pb-8">
+  <div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-4 shadow-card border border-border-light dark:border-border-dark">
+    <div id="info-footer-text" class="info-text text-sm leading-relaxed">{{ info_footer_html }}</div>
+  </div>
+</footer>
+{% endif %}
 
 <!-- Expired overlay -->
 <div id="expired-overlay" aria-live="assertive" class="hidden fixed inset-0 z-50 bg-bg-light dark:bg-bg-dark flex flex-col items-center justify-center text-center p-8 gap-4">
@@ -2067,6 +2202,14 @@ document.addEventListener('click', e => {
       break;
     case 'dismiss-install':
       dismissInstallBanner();
+      break;
+    // Defined by the script right after the info card, which only exists,
+    // with these buttons, when there is text to show.
+    case 'info-collapse':
+      collapseInfoCard();
+      break;
+    case 'info-more':
+      expandInfoCard();
       break;
   }
 });

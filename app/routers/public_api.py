@@ -169,7 +169,7 @@ async def get_token(token_id: str) -> dict:
 @router.patch("/tokens/{token_id}", response_model=ApiTokenResponse)
 async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
     """Change any of label, entities, expiry, PIN, remember-PIN, the
-    device lock and the remaining-uses counter in one call.
+    device lock, the remaining-uses counter and the info text in one call.
 
     Everything is validated before anything is written, so a bad PIN does not
     leave the entity list changed. The expiry change leaves a revocation in
@@ -186,6 +186,13 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit entities on a revoked token",
+        )
+    info_change = body.info_text is not None or body.info_text_in_footer is not None
+    if info_change and row["revoked"]:
+        # Same refusal as the dashboard's info editor.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the info text of a revoked token",
         )
 
     if body.label is not None:
@@ -210,6 +217,8 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
         await admin.update_token_remember_pin(
             token_id, TokenRememberPinRequest(remember_pin=body.remember_pin), _=API_PRINCIPAL
         )
+    if info_change:
+        await db.set_token_info(token_id, body.info_text, body.info_text_in_footer)
     if body.device_binding is not None and body.device_binding != bool(row["device_binding"]):
         # The dashboard's toggle: clears any claim and hangs up open streams.
         await admin.update_device_binding(
@@ -217,8 +226,10 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
         )
     if body.show_remaining_uses is not None:
         await db.set_show_remaining_uses(token_id, body.show_remaining_uses)
-        # Open guest pages draw the counter at load; reload them so it
-        # appears or goes away now, as it does after the dashboard's Schedule.
+    if body.show_remaining_uses is not None or info_change:
+        # Open guest pages draw the counter and the info text at load; reload
+        # them once, after every write, so the change shows now, as it does
+        # after the dashboard's Schedule or Guest info.
         await ha_client.broadcast_schedule_changed(token_id)
     return await _full_token(token_id)
 
@@ -381,6 +392,9 @@ async def duplicate_token(token_id: str, body: ApiTokenDuplicateRequest | None =
         remember_pin=bool(row["remember_pin"]),
         device_binding=bool(row["device_binding"]),
         show_remaining_uses=bool(row["show_remaining_uses"]),
+        # Guidance for the place, not the guest, so the copy keeps it.
+        info_text=row["info_text"],
+        info_text_in_footer=bool(row["info_text_in_footer"]),
         country_allowlist=(
             json.loads(row["country_allowlist"]) if row["country_allowlist"] else None
         ),

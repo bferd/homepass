@@ -4,6 +4,7 @@
 # operations require the slug in the URL path (not a cookie). The admin
 # dashboard uses SameSite=strict cookies for CSRF protection.
 import asyncio
+import hashlib
 import ipaddress
 from contextlib import AsyncExitStack
 import json
@@ -23,6 +24,7 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 from app import database as db
 from app import device_binding
@@ -32,6 +34,8 @@ from app import ha_client
 from app import i18n
 from app import local_network
 from app import proximity
+from app import region
+from app import richtext
 from app import schedule
 from app.build import BUILD_VERSION, STATIC_DIR
 from app.client_ip import client_ip as resolve_client_ip
@@ -42,6 +46,7 @@ from app.models import (
     CommandRequest,
     FORBIDDEN_DATA_KEYS,
     NEVER_EXPIRES_SECONDS,
+    clean_info_text,
     validate_light_color,
 )
 from app.rate_limiter import rate_limiter
@@ -872,6 +877,54 @@ async def guest_service_worker():
 # PWA shell
 # ---------------------------------------------------------------------------
 
+
+async def _info_context(row, pending: bool) -> dict:
+    """The welcome and info text for a guest page that has passed every gate.
+
+    The global welcome text and the link's own text share one card at the top,
+    global first, unless the link's text is flagged for the footer, in which
+    case it gets a box of its own below the cards. A pending page shows the
+    welcome text only: the link's text is guidance for a guest who can get in
+    (a door code, say), and a link that does not work yet has no business
+    handing it out.
+
+    Only guest_pwa calls this, after the IP, country, PIN and device gates,
+    so no refusal page, manifest, /state or stream can carry either text.
+    """
+    welcome = clean_info_text(settings.welcome_text or "")
+    own = "" if pending else row["info_text"]
+    in_footer = bool(row["info_text_in_footer"])
+    top = [t for t in (welcome, "" if in_footer else own) if t]
+    footer = own if in_footer else ""
+    ctx = {"info_top_html": None, "info_top_line": None, "info_top_hash": None,
+           "info_footer_html": None}
+    if not top and not footer:
+        # No region lookup, and so no Home Assistant call, for a page with
+        # nothing to link.
+        return ctx
+    zone, _source = await schedule.house_zone_name()
+    phone_region = region.resolve_region(
+        settings.phone_region, await ha_client.get_country(), zone
+    )
+    if top:
+        ctx["info_top_html"] = Markup("\n\n").join(
+            richtext.render(t, phone_region) for t in top
+        )
+        # What the collapsed card shows: the first line of the same text,
+        # formatted and linked as in the full card. Empty (only tags, nothing
+        # to read) falls back to the card's label in the template.
+        ctx["info_top_line"] = richtext.first_line(tuple(top), phone_region)
+        # What the card holds, so the remembered collapsed state lets go
+        # when either text in it changes. Text moved to the footer is not
+        # part of it: editing that should not reopen the card.
+        digest = hashlib.sha256("\x00".join(
+            [welcome, "" if in_footer else own]).encode("utf-8"))
+        ctx["info_top_hash"] = digest.hexdigest()[:12]
+    if footer:
+        ctx["info_footer_html"] = richtext.render(footer, phone_region)
+    return ctx
+
+
 @router.get("/{slug}", response_class=HTMLResponse)
 async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: str = Path(max_length=64)):
     row = await db.get_token_by_slug(slug)
@@ -1009,6 +1062,7 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
         ),
         "preview_entity_ids": await db.get_token_entities(row["id"]) if pending else [],
         "preview_entity_meta": await db.get_token_entity_meta(row["id"]) if pending else {},
+        **await _info_context(row, pending),
     })
     response = templates.TemplateResponse(request, "guest_pwa.html", ctx)
     if row["device_binding"]:

@@ -50,6 +50,11 @@ These are the only add-on options. Everything else is set per link, in the dashb
 
 The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, both colours and how many days of activity to keep. Changes apply straight away, with no restart.
 
+Two settings are only in the dashboard, not in the add-on options:
+
+- **Welcome text** is shown at the top of every guest page, up to 1000 characters when entered here. A `WELCOME_TEXT` environment variable is not length-checked, so keep it short. Leave it empty to show nothing. Open guest pages reload on their own when it changes. See [Guest info text](#guest-info-text).
+- **Phone region** is a two-letter country code, such as `CA`, used to recognise phone numbers written without a country code in the welcome and guest info text. Leave it blank to work it out automatically. The dialog refuses a code it does not know; a value from anywhere else that is not a valid two-letter country code, such as a `PHONE_REGION` environment variable, is ignored and the automatic lookup is used instead. Open guest pages reload on their own when it changes.
+
 A value saved there **overrides** the add-on option. The option stays underneath: the dialog shows which fields are overridden and what the option says, and **Revert** puts the option back in charge. While a field is overridden, changing that option in the Configuration tab has no effect. Saving a field back to the same value as its option clears the override.
 
 Admin username and password, and the Home Assistant connection, can only be changed in the add-on configuration. A mistake there could lock you out of the dashboard, and they are not something a browser session should be able to read or change.
@@ -162,12 +167,13 @@ Each token's card offers:
 
 - **Extend** — push the expiry out. It reads **Renew** on a link that has already expired, been revoked or been used up.
 - **Schedule** — change the start, end, weekly times or use limit. See [When a link works](#when-a-link-works).
+- **Guest info** — change the link's own text for the guest, or move it to the footer. See [Guest info text](#guest-info-text).
 - **Edit Entities** — change what is on the link, including the per-entity options.
 - **Add PIN / PIN Protected** — set, change or remove the PIN, choose whether it is remembered, and manage links without PIN.
 - **Copy link without PIN / QR without PIN** — on PIN-protected links only; see above.
 - **Rotate Link** — generate a new link and kill the old one immediately. Entities, options, expiry, PIN and history are kept, so use this instead of rebuilding a token when a link has reached the wrong person. A guest who had entered the PIN is asked for it again, links without PIN are retired, and a device lock is released.
 - **Lock to One Device / Unbind Device** — lock the link to the first browser that claims it, or release the claim so the next device can take it.
-- **Duplicate** — start a new link pre-filled with this one's entities and their settings (display names, location and home-network requirements), IP allowlist, country allowlist, device-lock and remember-PIN settings, and timing: the same mode, use limit, weekly times and length, starting now. The PIN itself is not copied.
+- **Duplicate** — start a new link pre-filled with this one's entities and their settings (display names, location and home-network requirements), IP allowlist, country allowlist, device-lock and remember-PIN settings, guest info text, and timing: the same mode, use limit, weekly times and length, starting now. The PIN itself is not copied.
 - **Revoke** — stop the link working, keeping its history.
 - **Delete** — remove the token and its history.
 
@@ -176,6 +182,48 @@ Each token's card offers:
 **Countries** is also set when the link is created: a comma-separated list of country codes (`GB, IE`). The link then only opens for visitors whose internet address is registered in one of those countries, plus anyone on your **Home Network Ranges**. It is a coarse filter — a VPN or a roaming phone can appear to be somewhere else — and it needs the same reverse proxy the IP allowlist does. The country lookup happens on your own machine, using a database built into the add-on (IP Geolocation by [DB-IP](https://db-ip.com), CC BY 4.0); nothing about your guests is sent anywhere.
 
 **Recent activity** in the dashboard shows link opens and commands. Access logs are kept for 90 days, or as set under **Settings**.
+
+## Guest info text
+
+There are two texts a guest can be shown, and both are optional:
+
+- **Welcome text**, set once under **Settings**, appears on every guest page.
+- **Guest info text** belongs to one link: the door code, where to park, who to call. Set it in **Guest info text** when creating the link, or later with **Guest info** on the link's card.
+
+Both appear in one card at the top of the guest page, welcome text first, with a blank line between them. Tick **Show in the footer instead** to move the link's text out of that card into a box at the bottom of the page, below the controls, which is always visible. The welcome text stays at the top; with no welcome text, there is no top card at all.
+
+The guest can tap **Collapse** to shrink the top card to a one-line strip, and **More** to open it again. The strip shows only the first line of the card's text, with its formatting and links, cut off with an ellipsis if it is too long; if the text has tags and nothing to read, it shows the card's name instead. Nothing collapses on its own and there is no timer. The choice is remembered per link, in that browser only, and the card opens again by itself when its text changes: when the welcome text or the link's text is edited, and when a link that had not started yet goes live and its own text joins the card. The footer box has no such buttons.
+
+When a link's text or its footer setting is changed, from the dashboard or through the API, guest pages already open on that link reload on their own and show the new text; a collapsed card opens again, because its text changed. Changing the welcome text or the **Phone region** under **Settings** reloads every open guest page in the same way, on every link. A change made through the `WELCOME_TEXT` or `PHONE_REGION` environment variable takes effect after a restart.
+
+The text is stored exactly as typed and shown with its line breaks kept. A few formatting tags are understood, in upper or lower case:
+
+| Tags | Effect |
+|------|--------|
+| `<b>`, `<strong>` | bold |
+| `<i>`, `<em>` | italic |
+| `<u>`, `<s>` | underlined, struck through |
+| `<small>`, `<mark>` | smaller, highlighted |
+| `<h1>` to `<h6>` | headings, sized for the card |
+| `<ul>`, `<ol>`, `<li>` | bulleted and numbered lists |
+| `<br>` | a line break |
+| `<font color="...">` | coloured text |
+
+These tags take no attributes; anything written inside them, such as `class` or `style`, is dropped. The one exception is `color` on `<font>`, which must be one of the 148 standard CSS colour names (`red`, `darkgreen`, `rebeccapurple`), `#rgb` or `#rrggbb`, or `rgb(r, g, b)` with three whole numbers from 0 to 255. Anything else, such as `rgba(...)`, `hsl(...)` or a name that is not on the list, is dropped and the text keeps its normal colour. A fixed colour can be hard to read in dark mode or against your brand colours, so check the page in both themes.
+
+Every other tag is not interpreted and is shown as typed, so `<script>`, `<img>`, `<div>` or a `<a href="...">` link appear on the page as text, and so does a closing tag that does not close anything. Entities are not decoded either: `&lt;b&gt;` shows up as `&lt;b&gt;`. A tag left open is closed at the end of the text. Links cannot be written by hand; instead, three things become tappable links by themselves, anywhere outside a tag:
+
+- web addresses starting with `https://`, opened in a new tab (`http://` addresses stay plain text),
+- email addresses,
+- phone numbers.
+
+A phone number starting with `+` and the country code always works. One written the national way, such as `613-996-2000`, needs to know the country. HomePass uses the **Phone region** setting; if that is blank, Home Assistant's country; and if that is not set either, the country of Home Assistant's time zone. With none of those, only `+` numbers become links. Two phone numbers separated only by a space are read as one and only one of them links, so separate them with a comma, a new line or the word "or".
+
+Each text is limited to 1000 characters when entered in the dashboard or through the API, tags included. A `WELCOME_TEXT` environment variable is not length-checked, so keep it short. On a link that has not started yet, or is between its weekly times, only the welcome text is shown: the link's own text, and the footer box, appear once the link works. **Duplicate** copies the link's text and footer setting, so check it before sending the copy to someone else.
+
+Anyone who can open the link can read its text, and so can anyone they forward it to. Do not put anything in it that the guest should not see, and remember the welcome text is shown on every link. The text is kept out of the page title and the other tags a chat app builds its link preview from, and it is never on the PIN or device screens or on an expired or revoked link's page.
+
+In the [Public API](#public-api), `info_text` and `info_text_in_footer` can be set when creating a token and changed with `PATCH /api/v1/tokens/{id}`, are copied by duplicate, and are included in every token response. An empty `info_text` removes the text, and a `PATCH` that changes either field reloads the link's open guest pages. A revoked token's text cannot be changed.
 
 ## Public API
 
@@ -188,7 +236,7 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `GET` | `/api/v1/tokens` | List tokens |
 | `POST` | `/api/v1/tokens` | Create a token |
 | `GET` | `/api/v1/tokens/{id}` | One token, with entities and per-entity options |
-| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN or the device lock |
+| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter or the guest info text |
 | `PUT` | `/api/v1/tokens/{id}/schedule` | Replace start, end, weekly times and use limit |
 | `POST` | `/api/v1/tokens/{id}/unbind` | Release a device lock's claim |
 | `GET` / `POST` | `/api/v1/tokens/{id}/access-codes` | List or make links without PIN (a new code is shown once) |
@@ -198,7 +246,7 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `POST` | `/api/v1/tokens/{id}/renew` | New expiry, and un-revoke |
 | `POST` | `/api/v1/tokens/{id}/activate` | Start a scheduled token now |
 | `POST` | `/api/v1/tokens/{id}/rotate-slug` | New link, old one stops working |
-| `POST` | `/api/v1/tokens/{id}/duplicate` | Copy entities, options, allowlists, weekly times, use limit, remember-PIN and device-lock settings into a new token |
+| `POST` | `/api/v1/tokens/{id}/duplicate` | Copy entities, options, allowlists, weekly times, use limit, remember-PIN and device-lock settings and guest info text into a new token |
 
 Anything that sets an expiry takes either `expires_at` (Unix seconds — handy for a check-out time) or `expires_in_seconds`, not both. Creating a token runs the same checks as the dashboard and accepts every field the dashboard sets — weekly times, use limit, remember-PIN, device lock and country allowlist included. Responses never include a PIN, only `has_pin`.
 
@@ -206,7 +254,7 @@ With the API enabled, the dashboard header gets an **API Docs** link to an inter
 
 ## Languages
 
-Guest links show in the guest's own browser language when it is one of the 24 official EU languages, and in English otherwise. The admin dashboard is in English or Spanish: it follows your browser, and **Settings → Language** pins one for the browser you are using. The app name, contact message, token labels and display names you set are shown exactly as you typed them, in every language.
+Guest links show in the guest's own browser language when it is one of the 24 official EU languages, and in English otherwise. The admin dashboard is in English or Spanish: it follows your browser, and **Settings → Language** pins one for the browser you are using. The app name, contact message, welcome text, guest info text, token labels and display names you set are not translated: they are shown as you typed them in every language, with the welcome and guest info text's formatting tags applied.
 
 ## Notifications
 

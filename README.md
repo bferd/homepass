@@ -29,6 +29,7 @@ installs, just a link.
 - **Scheduled start** — an optional start time; the link can be shared early and shows a countdown until then
 - **Weekly access windows** — limit a link to recurring days and times (overnight windows supported), in Home Assistant's time zone
 - **Single-use links** — a link that stops after one (or N) guest commands; opening it or a chat-app preview never uses it up
+- **Welcome and guest info text** — a welcome message on every guest page and a note per link (door code, parking), in a collapsible top card or a footer box, with simple formatting tags (bold, headings, lists, font colour) and web links, email addresses and phone numbers made tappable
 - **Optional PIN** — a 4–8 digit PIN on top of the link, enforced on every guest endpoint,
   with revocable links that skip it and a per-link choice of whether it is remembered
 - **Single-device lock** — optionally lock a link to the first browser that claims it; other devices are refused
@@ -136,8 +137,20 @@ Set these in **Settings → Add-ons → HomePass → Configuration**:
 ### Settings in the dashboard
 
 App name, contact message, Guest URL, both colours and access-log retention
-can also be changed live from the dashboard's **Settings** dialog. Precedence,
-highest first:
+can also be changed live from the dashboard's **Settings** dialog. Two more
+settings are there and not among the add-on options:
+
+- **Welcome text**: shown at the top of every guest page, up to 1000
+  characters; empty shows nothing.
+- **Phone region**: a two-letter country code (e.g. `CA`) for reading phone
+  numbers written without a country code; blank works it out from Home
+  Assistant's country, then its time zone.
+
+Changing either one reloads every open guest page, so guests see it at once.
+Set through `WELCOME_TEXT` or `PHONE_REGION` instead, a change takes effect
+after a restart.
+
+Precedence, highest first:
 
 1. A value saved in the dashboard (stored in the SQLite database)
 2. The add-on option, or the environment variable in Docker
@@ -161,6 +174,8 @@ environment variables.
 | `PORT` | HTTP port to listen on | No | `5880` |
 | `APP_NAME` | Display name shown to guests | No | `Home Access` |
 | `CONTACT_MESSAGE` | Message shown on expired pages | No | `Please request a new link...` |
+| `WELCOME_TEXT` | Text shown at the top of every guest page | No | — |
+| `PHONE_REGION` | Two-letter country code for phone numbers in the guest text; unset uses Home Assistant's country, then its time zone. A value that is not a valid two-letter country code is ignored and that automatic lookup is used instead | No | — |
 | `ACCESS_LOG_RETENTION_DAYS` | Days to retain access logs | No | `90` |
 | `BRAND_BG` | Background color (hex) | No | `#F2F0E9` |
 | `BRAND_PRIMARY` | Primary/accent color (hex) | No | `#D9523C` |
@@ -227,8 +242,10 @@ The admin dashboard speaks English and Spanish. It follows the browser too, and
 dashboard; **Automatic** clears it).
 
 What is translated is HomePass's own text. The names you give — the app name,
-the contact message, token labels, per-entity display names — are shown as you
-wrote them, and so are Home Assistant's own entity names and select options.
+the contact message, the welcome and guest info text, token labels, per-entity
+display names — are shown as you
+wrote them (the welcome and guest info text with their formatting tags
+applied), and so are Home Assistant's own entity names and select options.
 Error details from the API stay in English; the guest page translates the
 refusals it shows to a guest.
 
@@ -525,7 +542,8 @@ curl -X POST -H "X-API-Key: $HOMEPASS_API_TOKEN" -H "Content-Type: application/j
 ```
 
 Endpoints under `/api/v1/tokens`: list, create, get, `PATCH` (label, entities,
-expiry, PIN, `remember_pin`, `device_binding`, `show_remaining_uses`), `DELETE`,
+expiry, PIN, `remember_pin`, `device_binding`, `show_remaining_uses`,
+`info_text`, `info_text_in_footer`), `DELETE`,
 `PUT .../{id}/schedule` (start, end, weekly windows, use limit), `POST .../{id}/revoke`, `renew`,
 `activate`, `rotate-slug`, `duplicate` and `unbind`, and
 `.../{id}/access-codes` (list, create, `{code_id}/rotate`, `DELETE {code_id}`)

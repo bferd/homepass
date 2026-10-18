@@ -104,6 +104,8 @@ async def create_token(
     device_binding: bool = False,
     country_allowlist: list[str] | None = None,
     show_remaining_uses: bool = False,
+    info_text: str = "",
+    info_text_in_footer: bool = False,
 ) -> dict[str, Any]:
     db = await get_db()
     token_id = str(uuid.uuid4())
@@ -121,11 +123,12 @@ async def create_token(
             """INSERT INTO tokens
                (id, slug, label, created_at, starts_at, expires_at, ip_allowlist, pin_hash,
                 access_windows, max_uses, remember_pin, device_binding, country_allowlist,
-                show_remaining_uses)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                show_remaining_uses, info_text, info_text_in_footer)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (token_id, slug, label, now, starts_at, expires_at, ip_json, pin_hash,
              windows_json, max_uses, int(bool(remember_pin)), int(bool(device_binding)),
-             country_json, int(bool(show_remaining_uses))),
+             country_json, int(bool(show_remaining_uses)), info_text,
+             int(bool(info_text_in_footer))),
         )
         if entity_ids:
             meta = entity_meta or {}
@@ -501,6 +504,29 @@ async def set_show_remaining_uses(token_id: str, enabled: bool) -> None:
     await db.execute(
         "UPDATE tokens SET show_remaining_uses = ? WHERE id = ?",
         (int(bool(enabled)), token_id),
+    )
+    await db.commit()
+
+
+async def set_token_info(
+    token_id: str,
+    info_text: str | None,
+    info_text_in_footer: bool | None,
+) -> None:
+    """Set a link's info text and where it is shown, in one write.
+
+    None leaves that field as stored, the same rule update_token_schedule
+    applies to show_remaining_uses, so a caller that changes one of the two
+    cannot clear the other by omission. "" is a value and clears the text.
+    """
+    db = await get_db()
+    footer = None if info_text_in_footer is None else int(info_text_in_footer)
+    await db.execute(
+        "UPDATE tokens SET "
+        "info_text = CASE WHEN ? IS NULL THEN info_text ELSE ? END, "
+        "info_text_in_footer = CASE WHEN ? IS NULL THEN info_text_in_footer ELSE ? END "
+        "WHERE id = ?",
+        (info_text, info_text, footer, footer, token_id),
     )
     await db.commit()
 

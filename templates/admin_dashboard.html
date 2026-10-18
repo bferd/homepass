@@ -174,6 +174,24 @@
   </main>
 </div>
 
+{#- The guest info controls, shared by the create modal (prefix f) and the
+    Guest info dialog (prefix i) so the two cannot drift apart. Filled through
+    .value from script, never through markup: the text is the admin's own and
+    may hold anything. -#}
+{% macro info_fields(p) %}
+      <div>
+        <label for="{{ p }}-info-text" class="block text-xs font-mono uppercase tracking-wider text-muted mb-1.5">{{ t('page.info.text') }}</label>
+        <textarea id="{{ p }}-info-text" rows="4" maxlength="1000"
+          class="w-full px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
+        <p class="text-xs text-muted mt-1">{{ t('page.info.text_hint') }}</p>
+        <label class="flex items-center gap-2.5 cursor-pointer mt-3">
+          <input id="{{ p }}-info-footer" type="checkbox" class="w-4 h-4 rounded border-border-light dark:border-border-dark accent-primary">
+          <span class="text-sm">{{ t('page.info.footer') }}</span>
+        </label>
+        <p class="text-xs text-muted mt-1 ml-6.5">{{ t('page.info.footer_hint') }}</p>
+      </div>
+{% endmacro %}
+
 <!-- Create Token Modal -->
 <div class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-soot/40 dark:bg-black/50 backdrop-blur-sm" id="create-modal">
   <div class="modal-animate bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" role="dialog" aria-modal="true" aria-labelledby="create-modal-title">
@@ -227,6 +245,7 @@
         </label>
         <p class="text-xs text-muted mt-1 ml-6.5">{{ t('page.create.device_binding_hint_html') }}</p>
       </div>
+{{ info_fields('f') }}
       <div>
         <label class="block text-xs font-mono uppercase tracking-wider text-muted mb-1.5">{{ t('page.create.entities') }}</label>
         <div id="create-picker"></div>
@@ -461,6 +480,25 @@
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="schedule" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
       <button data-action="submit-schedule" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Guest Info Modal -->
+<div class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-soot/40 dark:bg-black/50 backdrop-blur-sm" id="info-modal">
+  <div class="modal-animate bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+    <div class="flex items-center justify-between mb-3">
+      <h2 id="info-modal-title" class="text-lg font-serif">{{ t('page.info.title') }}</h2>
+      <button data-action="close-modal" data-modal="info" aria-label="{{ t('page.common.close_dialog') }}" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-soot/5 dark:hover:bg-white/5 text-muted transition-colors">
+        <span aria-hidden="true" class="material-symbols-outlined text-xl">close</span>
+      </button>
+    </div>
+    <div id="info-token-label" class="text-sm text-muted mb-4"></div>
+{{ info_fields('i') }}
+    <div id="info-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
+    <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
+      <button data-action="close-modal" data-modal="info" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
+      <button data-action="submit-info" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -917,10 +955,14 @@ function renderTokens() {
             <span aria-hidden="true" class="material-symbols-outlined text-sm">block</span> ${esc(tr('action.revoke'))}
           </button>
         </div>
-        <div class="grid grid-cols-3 gap-2 mt-2">
+        <div class="grid grid-cols-2 gap-2 mt-2">
           <button data-id="${esc(t.id)}" data-action="open-schedule-modal"
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors" title="${esc(tr('action.schedule_title'))}">
             <span aria-hidden="true" class="material-symbols-outlined text-sm">edit_calendar</span> ${esc(tr('action.schedule'))}
+          </button>
+          <button data-id="${esc(t.id)}" data-action="open-info-modal"
+            class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${t.info_text ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
+            <span aria-hidden="true" class="material-symbols-outlined text-sm">info</span> ${esc(tr('action.info'))}
           </button>
           <button data-id="${esc(t.id)}" data-action="confirm-rotate"
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors" title="${esc(tr('action.rotate_title'))}">
@@ -1714,6 +1756,60 @@ async function submitSchedule() {
   }
 }
 
+// ── Guest Info Modal ──────────────────────────────────────────────────
+let infoTokenId = null;
+
+// The text goes in and comes out through .value only: it is whatever the
+// admin typed, markup included, and is escaped where a guest page renders it.
+function setInfoFields(p, text, inFooter) {
+  document.getElementById(`${p}-info-text`).value = text || '';
+  document.getElementById(`${p}-info-footer`).checked = Boolean(inFooter);
+}
+function readInfoFields(p) {
+  return {
+    info_text: document.getElementById(`${p}-info-text`).value,
+    info_text_in_footer: document.getElementById(`${p}-info-footer`).checked,
+  };
+}
+
+async function openInfoModal(tokenId) {
+  const r = await fetch(`${BASE}/admin/tokens/${tokenId}`);
+  if (!r.ok) { showToast(tr('token.load_failed'), 'error'); return; }
+  const token = await r.json();
+  infoTokenId = tokenId;
+  document.getElementById('info-token-label').textContent = token.label;
+  document.getElementById('info-error').textContent = '';
+  setInfoFields('i', token.info_text, token.info_text_in_footer);
+  openModal('info-modal');
+}
+function closeInfoModal() { closeModal('info-modal'); infoTokenId = null; }
+
+async function submitInfo() {
+  if (!infoTokenId) return;
+  const errEl = document.getElementById('info-error');
+  const r = await fetch(`${BASE}/admin/tokens/${infoTokenId}/info`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(readInfoFields('i')),
+  });
+  if (r.ok) {
+    const updated = await r.json();
+    // Only the two fields: the PATCH reply is the bare token row, without the
+    // entity count the list carries, so it cannot replace the list's copy.
+    const held = tokens.find(t => t.id === updated.id);
+    if (held) {
+      held.info_text = updated.info_text;
+      held.info_text_in_footer = updated.info_text_in_footer;
+    }
+    closeInfoModal();
+    showToast(tr('info.updated'), 'success');
+    renderTokens();
+  } else {
+    const err = await r.json().catch(() => ({}));
+    errEl.textContent = typeof err.detail === 'string' ? err.detail : tr('info.error');
+  }
+}
+
 document.getElementById('f-timing').innerHTML = timingFormHtml('f');
 document.getElementById('s-timing').innerHTML = timingFormHtml('s');
 
@@ -1740,6 +1836,9 @@ function openCreateModal(preset = {}) {
   // A duplicate keeps the lock setting but never the claim: the copy is for a
   // different guest, whose device has not claimed anything yet.
   document.getElementById('f-device-binding').checked = Boolean(preset.deviceBinding);
+  // Guidance for the place, not the guest, so a duplicate carries it; shown
+  // here so the admin can change a line that named the last guest.
+  setInfoFields('f', preset.infoText, preset.infoTextInFooter);
   document.getElementById('create-error').textContent = '';
   // A duplicate passes the source token's timing through
   // timingPresetFromToken, which keeps the start blank: a start time belongs
@@ -1782,6 +1881,7 @@ async function submitCreate() {
     device_binding: document.getElementById('f-device-binding').checked,
     show_remaining_uses: timing.body.max_uses != null
       && document.getElementById('f-show-remaining').checked,
+    ...readInfoFields('f'),
   };
 
     const r = await fetch(`${BASE}/admin/tokens`, {
@@ -1818,6 +1918,8 @@ async function duplicateToken(tokenId) {
     rememberPin: token.remember_pin,
     deviceBinding: token.device_binding,
     countryAllowlist: token.country_allowlist || [],
+    infoText: token.info_text,
+    infoTextInFooter: token.info_text_in_footer,
   });
 }
 
@@ -2273,6 +2375,8 @@ const SETTINGS_FIELDS = [
     hint: tr('settings.app_name_hint') },
   { key: 'contact_message', label: tr('settings.contact_message'), type: 'textarea', maxlength: 500,
     hint: tr('settings.contact_message_hint') },
+  { key: 'welcome_text', label: tr('settings.welcome_text'), type: 'textarea', maxlength: 1000, rows: 5,
+    hint: tr('settings.welcome_text_hint') },
   { key: 'guest_url', label: tr('settings.guest_url'), type: 'text', maxlength: 300,
     placeholder: 'https://guest.myhouse.com',
     hint: tr('settings.guest_url_hint') },
@@ -2280,6 +2384,8 @@ const SETTINGS_FIELDS = [
   { key: 'brand_bg', label: tr('settings.brand_bg'), type: 'color', hint: tr('settings.brand_bg_hint') },
   { key: 'access_log_retention_days', label: tr('settings.retention'), type: 'number', min: 1, max: 3650,
     hint: tr('settings.retention_hint') },
+  { key: 'phone_region', label: tr('settings.phone_region'), type: 'text', maxlength: 2,
+    placeholder: 'CA', hint: tr('settings.phone_region_hint') },
 ];
 // Rendered into the page by the server, so a change is only visible after a
 // reload. The rest (the contact message, retention) are read per request.
@@ -2291,7 +2397,7 @@ function settingsInputHtml(f, entry) {
   const cls = 'w-full px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
   const value = entry.value == null ? '' : String(entry.value);
   if (f.type === 'textarea') {
-    return `<textarea id="${id}" rows="2" maxlength="${f.maxlength}" class="${cls}">${esc(value)}</textarea>`;
+    return `<textarea id="${id}" rows="${f.rows || 2}" maxlength="${f.maxlength}" class="${cls}">${esc(value)}</textarea>`;
   }
   if (f.type === 'color') {
     return `<input id="${id}" type="color" value="${esc(value.toLowerCase())}" class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">`;
@@ -2434,13 +2540,14 @@ function closeModal(id) {
   releaseFocus();
 }
 
-['create-modal', 'edit-modal', 'extend-modal', 'schedule-modal', 'confirm-modal', 'qr-modal'].forEach(id => {
+['create-modal', 'edit-modal', 'extend-modal', 'schedule-modal', 'info-modal', 'confirm-modal', 'qr-modal'].forEach(id => {
   document.getElementById(id).addEventListener('click', e => {
     if (e.target === e.currentTarget) {
       if (id === 'create-modal') closeCreateModal();
       else if (id === 'edit-modal') closeEditModal();
       else if (id === 'extend-modal') closeExtendModal();
       else if (id === 'schedule-modal') closeScheduleModal();
+      else if (id === 'info-modal') closeInfoModal();
       else if (id === 'confirm-modal') closeConfirmModal();
       else if (id === 'qr-modal') closeQrModal();
     }
@@ -2597,6 +2704,7 @@ document.addEventListener('keydown', e => {
       'edit-modal': closeEditModal,
       'pin-modal': closePinModal,
       'schedule-modal': closeScheduleModal,
+      'info-modal': closeInfoModal,
       'settings-modal': closeSettingsModal,
       'create-modal': closeCreateModal,
     };
@@ -2682,6 +2790,10 @@ document.addEventListener('click', e => {
     case 'window-remove': removeWindow(el.dataset.prefix, parseInt(el.dataset.index, 10)); break;
     case 'window-day': toggleWindowDay(el.dataset.prefix, parseInt(el.dataset.index, 10), parseInt(el.dataset.day, 10)); break;
 
+    // Guest info modal
+    case 'open-info-modal': openInfoModal(el.dataset.id); break;
+    case 'submit-info': submitInfo(); break;
+
     // Confirm modal
     case 'confirm-ok': {
       const cb = _confirmCallback;
@@ -2692,7 +2804,7 @@ document.addEventListener('click', e => {
 
     // Close any modal
     case 'close-modal': {
-      const modalMap = { create: closeCreateModal, edit: closeEditModal, extend: closeExtendModal, confirm: closeConfirmModal, qr: closeQrModal, entity: closeEntityModal, pin: closePinModal, template: closeTemplateModal, schedule: closeScheduleModal, settings: closeSettingsModal };
+      const modalMap = { create: closeCreateModal, edit: closeEditModal, extend: closeExtendModal, confirm: closeConfirmModal, qr: closeQrModal, entity: closeEntityModal, pin: closePinModal, template: closeTemplateModal, schedule: closeScheduleModal, info: closeInfoModal, settings: closeSettingsModal };
       const closer = modalMap[el.dataset.modal];
       if (closer) closer();
       break;
