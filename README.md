@@ -36,6 +36,7 @@ installs, just a link.
 - **Proximity requirement** — mark individual entities as usable only from inside HA's `zone.home`
 - **Home-network-only controls** — mark individual entities as commandable only from your home network's IP ranges
 - **Per-entity overrides** — rename an entity for the guest, and opt lights into a brightness slider and colour controls
+- **Section headings** — rename the guest page's "Lights", "Switches" and other headings per link; guests can tap a heading to collapse its section unless the link locks it open
 - **Camera streaming** — read-only live views; no `camera.*` service is reachable
 - **Entity templates and label filtering** — save a named selection, filter the picker by HA label, bulk-add every match
 - **Entity suggestions** — opt-in "Doors & locks" and "Lights" chips that pre-fill a new link's selection for review
@@ -243,7 +244,7 @@ dashboard; **Automatic** clears it).
 
 What is translated is HomePass's own text. The names you give — the app name,
 the contact message, the welcome and guest info text, token labels, per-entity
-display names — are shown as you
+display names, section heading names — are shown as you
 wrote them (the welcome and guest info text with their formatting tags
 applied), and so are Home Assistant's own entity names and select options.
 Error details from the API stay in English; the guest page translates the
@@ -543,7 +544,7 @@ curl -X POST -H "X-API-Key: $HOMEPASS_API_TOKEN" -H "Content-Type: application/j
 
 Endpoints under `/api/v1/tokens`: list, create, get, `PATCH` (label, entities,
 expiry, PIN, `remember_pin`, `device_binding`, `show_remaining_uses`,
-`info_text`, `info_text_in_footer`), `DELETE`,
+`info_text`, `info_text_in_footer`, `group_headings`), `DELETE`,
 `PUT .../{id}/schedule` (start, end, weekly windows, use limit), `POST .../{id}/revoke`, `renew`,
 `activate`, `rotate-slug`, `duplicate` and `unbind`, and
 `.../{id}/access-codes` (list, create, `{code_id}/rotate`, `DELETE {code_id}`)
