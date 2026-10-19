@@ -235,6 +235,9 @@ def _row_to_response(row: Any, entity_ids: list[str] | None = None,
         # where it is rendered for a guest.
         "info_text": row["info_text"],
         "info_text_in_footer": bool(row["info_text_in_footer"]),
+        # Only the section headings the admin renamed or hid, by group key;
+        # {} is every heading as default.
+        "group_headings": db.group_headings_from_row(row["group_headings"]),
         "remember_pin": bool(row["remember_pin"]),
         # Whether the link is locked to one device, and when that device
         # claimed it (None while unclaimed). The claim's secret hash never
@@ -331,6 +334,7 @@ async def _create_token(body: TokenCreateRequest, expires_at: int | None = None)
         show_remaining_uses=body.show_remaining_uses,
         info_text=body.info_text,
         info_text_in_footer=body.info_text_in_footer,
+        group_headings=body.group_headings,
     )
     entity_ids = await db.get_token_entities(row["id"])
     return _row_to_response(row, entity_ids)
@@ -443,6 +447,22 @@ def _clean_entity_meta(
     return cleaned or None
 
 
+async def _set_group_headings_if_changed(row: Any, group_headings: dict | None) -> bool:
+    """Store a link's section headings. True only if that changed them.
+
+    Shared with the public API. None (the field left out) and a value equal to
+    what is stored both write nothing and return False, so the caller can tell
+    open guest pages to reload only when there is something new to show, the
+    same rule the info PATCH follows.
+    """
+    if group_headings is None:
+        return False
+    if group_headings == db.group_headings_from_row(row["group_headings"]):
+        return False
+    await db.set_token_group_headings(row["id"], group_headings)
+    return True
+
+
 @router.patch("/tokens/{token_id}/entity-meta")
 async def set_entity_meta(
     token_id: str,
@@ -504,6 +524,8 @@ async def update_token_entities(
         token_id, body.entity_ids, _clean_entity_meta(body.entity_meta)
     )
     await ha_client.invalidate_entity_cache(token_id)
+    if await _set_group_headings_if_changed(row, body.group_headings):
+        await ha_client.broadcast_schedule_changed(token_id)
     entity_ids = await db.get_token_entities(token_id)
     meta = await db.get_token_entity_meta(token_id)
     row = await db.get_token_by_id(token_id)

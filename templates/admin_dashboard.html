@@ -611,8 +611,9 @@ let activityExpanded = false;
 const ACTIVITY_COLLAPSED_COUNT = 3;
 
 // Picker state (separate for create vs edit)
-let createPicker = { selected: new Set(), filter: 'all', label: '', search: '', meta: {} };
-let editPicker = { selected: new Set(), filter: 'all', label: '', search: '', meta: {} };
+// groupHeadings: { group_key: {name, locked} }, the link's section headings.
+let createPicker = { selected: new Set(), filter: 'all', label: '', search: '', meta: {}, groupHeadings: {} };
+let editPicker = { selected: new Set(), filter: 'all', label: '', search: '', meta: {}, groupHeadings: {} };
 // Which picker the save-template modal is reading its selection from.
 let templateModalContainer = null;
 // Which picker + entity the entity-settings modal is currently editing.
@@ -1057,13 +1058,11 @@ function applyEntityDefaults(pickerState, entityId) {
 // ── Entity Picker Component ───────────────────────────────────────────
 // Derived from DOMAIN_ORDER so a domain added in domains.js gets a chip
 // automatically - camera was missing because this list was maintained by hand.
-// One chip per label, not per domain: input_boolean shares "Switches" with
+// One chip per section, not per domain: input_boolean shares "Switches" with
 // switch, input_button shares "Buttons" with button and input_datetime shares
-// "Date & Time" with datetime, so only the first domain of each label gets a
-// chip and pickerGroup() makes that chip match all of them.
-const pickerGroup = d => DOMAIN_LABELS[d] || d;
-const PICKER_DOMAINS = ['all', ...DOMAIN_ORDER.filter(
-  (d, i) => DOMAIN_ORDER.findIndex(o => pickerGroup(o) === pickerGroup(d)) === i)];
+// "Date & Time" with datetime, so only the group key of each section gets a
+// chip and groupKey() (static/domains.js) makes that chip match all of them.
+const PICKER_DOMAINS = ['all', ...DOMAIN_ORDER.filter(d => groupKey(d) === d)];
 const PICKER_ICONS = { all: 'apps', ...DOMAIN_ICONS };
 
 // What the entity is called in this picker: the per-token override if one is
@@ -1078,7 +1077,7 @@ function pickerLabel(e, pickerState) {
 // matching bed" is expressible and none of them silently clears another.
 function pickerFiltered(pickerState) {
   return allEntities.filter(e => {
-    if (pickerState.filter !== 'all' && pickerGroup(e.domain) !== pickerGroup(pickerState.filter)) return false;
+    if (pickerState.filter !== 'all' && groupKey(e.domain) !== groupKey(pickerState.filter)) return false;
     if (pickerState.label && !(e.labels || []).includes(pickerState.label)) return false;
     if (pickerState.search) {
       const q = pickerState.search.toLowerCase();
@@ -1094,6 +1093,62 @@ function pickerFiltered(pickerState) {
 // would never have a class for a colour that arrives at runtime.
 function labelSwatchStyle(color) {
   return /^#[0-9a-f]{3,8}$/i.test(color || '') ? ` style="background-color:${color}"` : '';
+}
+
+// The sections the selected entities fall into, in the order the guest page
+// draws them. Only these get a heading row: a section with nothing selected
+// has no heading to rename.
+function pickerGroupKeys(pickerState) {
+  const keys = new Set([...pickerState.selected].map(eid => groupKey(eid.split('.')[0])));
+  const rank = k => { const i = DOMAIN_ORDER.indexOf(k); return i === -1 ? 99 : i; };
+  return [...keys].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
+// What is saved: the headings of sections still on the link, and only those
+// the admin changed. A row for a section whose entities were all removed is
+// dropped here rather than kept for a heading the guest will never see.
+function pickerGroupHeadings(pickerState) {
+  const out = {};
+  for (const key of pickerGroupKeys(pickerState)) {
+    const h = pickerState.groupHeadings[key] || {};
+    const name = (h.name || '').trim().slice(0, 64);
+    if (name || h.locked) out[key] = { name, locked: Boolean(h.locked) };
+  }
+  return out;
+}
+
+// Typing updates the state without a re-render, so the input keeps its focus.
+function setGroupHeading(containerId, key, changes) {
+  const pickerState = getPickerState(containerId);
+  pickerState.groupHeadings[key] = { name: '', locked: false, ...pickerState.groupHeadings[key], ...changes };
+}
+
+function groupHeadingsHtml(containerId, pickerState) {
+  const keys = pickerGroupKeys(pickerState);
+  if (!keys.length) return '';
+  return `
+    <div class="mb-3">
+      <div class="text-[11px] font-mono font-bold uppercase tracking-wider text-muted mb-1 px-1">${esc(tr('picker.headings'))}</div>
+      <p class="text-[11px] text-muted mb-1.5 px-1">${esc(tr('picker.headings_hint'))}</p>
+      <ul class="border border-border-light dark:border-border-dark rounded-xl bg-surface-light dark:bg-surface-dark list-none" role="list">
+        ${keys.map(key => {
+          const h = pickerState.groupHeadings[key] || {};
+          const fallback = domainLabel(key);
+          return `<li class="flex items-center gap-3 px-3 py-2 border-b border-border-light dark:border-border-dark last:border-b-0">
+          <span aria-hidden="true" class="material-symbols-outlined text-muted text-lg flex-shrink-0">${PICKER_ICONS[key] || 'devices'}</span>
+          <input type="text" maxlength="64" value="${esc(h.name || '')}" placeholder="${esc(fallback)}"
+            aria-label="${esc(tr('picker.heading_name', { name: fallback }))}"
+            data-action="group-heading-name" data-container="${containerId}" data-group="${esc(key)}"
+            class="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-sm outline-none focus:border-primary">
+          <label class="inline-flex items-center gap-1.5 text-xs text-muted flex-shrink-0 cursor-pointer">
+            <input type="checkbox" ${h.locked ? 'checked' : ''}
+              data-action="group-heading-locked" data-container="${containerId}" data-group="${esc(key)}"
+              class="w-4 h-4 rounded border-border-light dark:border-border-dark accent-primary">
+            ${esc(tr('picker.heading_lock'))}
+          </label>
+        </li>`; }).join('')}
+      </ul>
+    </div>`;
 }
 
 function renderPicker(containerId, pickerState) {
@@ -1215,6 +1270,7 @@ function renderPicker(containerId, pickerState) {
         ${!selected.length ? `<li class="px-3 py-4 text-center text-xs text-muted">${esc(tr('picker.no_selected_match'))}</li>` : ''}
       </ul>
     </div>` : ''}
+    ${groupHeadingsHtml(containerId, pickerState)}
     <div class="mb-2">
       <div class="flex items-center justify-between mb-1.5 px-1">
         <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-muted">${esc(tr('picker.available', { count: available.length }))}</span>
@@ -1823,6 +1879,7 @@ function openCreateModal(preset = {}) {
   createPicker = {
     selected: new Set(preset.entityIds || []), filter: 'all', label: '', search: '',
     meta: JSON.parse(JSON.stringify(preset.entityMeta || {})),
+    groupHeadings: JSON.parse(JSON.stringify(preset.groupHeadings || {})),
   };
   document.getElementById('create-modal-title').textContent = preset.title || tr('create.title');
   document.getElementById('f-label').value = preset.label || '';
@@ -1873,6 +1930,7 @@ async function submitCreate() {
     label, slug,
     entity_ids: [...createPicker.selected],
     entity_meta: createPicker.meta,
+    group_headings: pickerGroupHeadings(createPicker),
     ...timing.body,
     ip_allowlist: ipList,
     country_allowlist: countryList,
@@ -1920,6 +1978,7 @@ async function duplicateToken(tokenId) {
     countryAllowlist: token.country_allowlist || [],
     infoText: token.info_text,
     infoTextInFooter: token.info_text_in_footer,
+    groupHeadings: token.group_headings || {},
   });
 }
 
@@ -2197,7 +2256,7 @@ async function submitPin() {
 // ── Edit Entities Modal ───────────────────────────────────────────────
 async function openEditModal(tokenId) {
   editTokenId = tokenId;
-  editPicker = { selected: new Set(), filter: 'all', label: '', search: '', meta: {} };
+  editPicker = { selected: new Set(), filter: 'all', label: '', search: '', meta: {}, groupHeadings: {} };
   document.getElementById('edit-error').textContent = '';
   document.getElementById('edit-token-label').textContent = tr('common.loading');
   document.getElementById('edit-picker').innerHTML = `<div class="text-center py-8 text-muted text-sm">${esc(tr('edit.loading_entities'))}</div>`;
@@ -2211,6 +2270,7 @@ async function openEditModal(tokenId) {
     token.entity_ids.forEach(id => editPicker.selected.add(id));
   }
   editPicker.meta = token.entity_meta || {};
+  editPicker.groupHeadings = token.group_headings || {};
   renderPicker('edit-picker', editPicker);
 }
 function closeEditModal() { closeModal('edit-modal'); editTokenId = null; document.getElementById('edit-picker').innerHTML = ''; }
@@ -2223,7 +2283,11 @@ async function submitEditEntities() {
   const r = await fetch(`${BASE}/admin/tokens/${editTokenId}/entities`, {
     method: 'PATCH',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ entity_ids: [...editPicker.selected], entity_meta: editPicker.meta }),
+    body: JSON.stringify({
+      entity_ids: [...editPicker.selected],
+      entity_meta: editPicker.meta,
+      group_headings: pickerGroupHeadings(editPicker),
+    }),
   });
 
   if (r.ok) {
@@ -2865,6 +2929,9 @@ document.addEventListener('change', e => {
   if (e.target.dataset.action === 'timing-advanced') {
     setAdvanced(e.target.dataset.prefix, e.target.checked);
   }
+  if (e.target.dataset.action === 'group-heading-locked') {
+    setGroupHeading(e.target.dataset.container, e.target.dataset.group, { locked: e.target.checked });
+  }
   if (e.target.id === 'pin-remember-field') saveRememberPin(e.target.checked);
   if (e.target.id === 'set-language') setAdminLanguage(e.target.value);
 });
@@ -2872,6 +2939,9 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if (e.target.dataset.action === 'picker-search') {
     setPickerSearch(e.target.dataset.container, e.target.value);
+  }
+  if (e.target.dataset.action === 'group-heading-name') {
+    setGroupHeading(e.target.dataset.container, e.target.dataset.group, { name: e.target.value });
   }
 });
 

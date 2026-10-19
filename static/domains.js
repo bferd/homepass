@@ -182,11 +182,23 @@ function entityColor(domain, state) {
   }
 }
 
-// The name a domain is shown under, in the page's language (tr() is in
-// util.js). DOMAIN_LABELS itself stays English on purpose: the admin picker
-// also groups by it — input_boolean joins switch because both say "Switches" —
-// and that grouping must not change with the language.
+// The section a domain is shown in: the first domain in DOMAIN_ORDER with the
+// same label, so input_boolean files under switch, input_button under button
+// and input_datetime under datetime. The guest page groups by it, the admin
+// picker's chips match by it, and a link's section headings are keyed by it.
+// It reads the English DOMAIN_LABELS on purpose, so the grouping (and every
+// stored heading key) never changes with the language. A domain HomePass does
+// not know is its own section.
+function groupKey(domain) {
+  const label = DOMAIN_LABELS[domain];
+  if (!label) return domain;
+  return DOMAIN_ORDER.find(d => DOMAIN_LABELS[d] === label) || domain;
+}
+
+// The name a section is shown under, in the page's language (tr() is in
+// util.js). Takes a domain or a group key; both give the section's name.
 function domainLabel(domain) {
+  domain = groupKey(domain);
   const key = `domain.${domain}`;
   if (hasTr(key)) return tr(key);
   return DOMAIN_LABELS[domain] || (domain.charAt(0).toUpperCase() + domain.slice(1));
