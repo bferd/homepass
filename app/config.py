@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     db_path: str = Field(default="/data/db.sqlite", min_length=1)
     app_name: str = "Home Access"
     contact_message: str = "Please request a new link from the person who shared this one."
+    # Shown at the top of every guest page; empty shows nothing. Dashboard and
+    # environment only, not an add-on option: a multi-line text does not fit
+    # the Supervisor's one-line configuration form.
+    welcome_text: str = ""
+    # ISO 3166-1 alpha-2 region that phone numbers written without a country
+    # code are read in. Blank works it out from Home Assistant's country, then
+    # its time zone. See app/region.py.
+    phone_region: str = ""
     access_log_retention_days: int = Field(default=90, ge=1)
     brand_bg: str = "#F2F0E9"
     brand_primary: str = "#D9523C"

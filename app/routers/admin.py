@@ -39,6 +39,7 @@ from app.models import (
     TEMPLATE_NAME_MAX,
     TokenCreateRequest,
     TokenDeviceBindingRequest,
+    TokenInfoRequest,
     TokenPinRequest,
     TokenRememberPinRequest,
     TokenScheduleRequest,
@@ -230,6 +231,10 @@ def _row_to_response(row: Any, entity_ids: list[str] | None = None,
             max(0, row["max_uses"] - row["use_count"]) if row["max_uses"] is not None else None
         ),
         "show_remaining_uses": bool(row["show_remaining_uses"]),
+        # Plain text as the admin typed it; "" is none. Escaped and linked only
+        # where it is rendered for a guest.
+        "info_text": row["info_text"],
+        "info_text_in_footer": bool(row["info_text_in_footer"]),
         "remember_pin": bool(row["remember_pin"]),
         # Whether the link is locked to one device, and when that device
         # claimed it (None while unclaimed). The claim's secret hash never
@@ -324,6 +329,8 @@ async def _create_token(body: TokenCreateRequest, expires_at: int | None = None)
         device_binding=body.device_binding,
         country_allowlist=countries,
         show_remaining_uses=body.show_remaining_uses,
+        info_text=body.info_text,
+        info_text_in_footer=body.info_text_in_footer,
     )
     entity_ids = await db.get_token_entities(row["id"])
     return _row_to_response(row, entity_ids)
@@ -563,6 +570,34 @@ async def update_token_schedule(
         reset_uses=body.reset_uses,
         show_remaining_uses=body.show_remaining_uses,
     )
+    await ha_client.broadcast_schedule_changed(token_id)
+    row = await db.get_token_by_id(token_id)
+    return _row_to_response(row)
+
+
+@router.patch("/tokens/{token_id}/info")
+async def update_token_info(
+    token_id: str,
+    body: TokenInfoRequest,
+    _: str = Depends(require_admin),
+) -> dict:
+    """Change a link's info text and whether it shows at the top or the foot
+    of the guest page. A field left out keeps its stored value.
+
+    A revoked token is refused, as a schedule edit is: revoking is the
+    stronger statement, and Renew exists for undoing it. Open guest tabs are
+    told to reload, as after a schedule edit, so they show the new text now;
+    the event carries no text, the reload reads it through every gate.
+    """
+    row = await db.get_token_by_id(token_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if row["revoked"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the info text of a revoked token",
+        )
+    await db.set_token_info(token_id, body.info_text, body.info_text_in_footer)
     await ha_client.broadcast_schedule_changed(token_id)
     row = await db.get_token_by_id(token_id)
     return _row_to_response(row)
@@ -958,6 +993,16 @@ async def delete_entity_template(template_id: str, _: str = Depends(require_admi
 # Same CSRF footing as every other admin write: the SameSite=strict session
 # cookie, and a JSON body a cross-site form cannot produce.
 
+# Settings every guest page draws at load. When the value in effect changes,
+# whether by an override or by a save or revert back to the add-on option,
+# every open guest page is told to reload so it shows the new one.
+_GUEST_PAGE_SETTINGS = ("welcome_text", "phone_region")
+
+
+def _guest_page_values() -> tuple:
+    return tuple(getattr(settings, key) for key in _GUEST_PAGE_SETTINGS)
+
+
 @router.get("/settings")
 async def read_settings(_: str = Depends(require_admin)) -> dict:
     return {"settings": settings_store.snapshot()}
@@ -971,7 +1016,10 @@ async def update_settings(
     changes = body.model_dump(exclude_unset=True)
     if not changes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No changes")
+    before = _guest_page_values()
     await settings_store.apply(changes)
+    if _guest_page_values() != before:
+        await ha_client.broadcast_schedule_changed_all()
     return {"settings": settings_store.snapshot()}
 
 
@@ -980,7 +1028,10 @@ async def revert_setting(key: str, _: str = Depends(require_admin)) -> dict:
     """Drop one override so the add-on option applies again."""
     if key not in settings_store.EDITABLE:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not an editable setting")
+    before = _guest_page_values()
     await settings_store.revert(key)
+    if _guest_page_values() != before:
+        await ha_client.broadcast_schedule_changed_all()
     return {"settings": settings_store.snapshot()}
 
 

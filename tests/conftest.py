@@ -86,9 +86,13 @@ def mock_ha_client():
         "broadcast_token_expired": AsyncMock(),
         "broadcast_token_activated": AsyncMock(),
         "broadcast_schedule_changed": AsyncMock(),
+        "broadcast_schedule_changed_all": AsyncMock(),
         # The house's zone for weekly access windows. UTC so a test can build
         # a window from time.gmtime() without a zone of its own.
         "get_time_zone": AsyncMock(return_value="UTC"),
+        # The house's country for reading national phone numbers in the info
+        # text. None, so only +-prefixed numbers link unless a test sets one.
+        "get_country": AsyncMock(return_value=None),
         "broadcast_device_unbound": AsyncMock(),
         "broadcast_access_changed": AsyncMock(),
         "invalidate_entity_cache": AsyncMock(),

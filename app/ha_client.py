@@ -72,6 +72,9 @@ async def close_client() -> None:
 _subscriptions: dict[str, set[asyncio.Queue]] = {}
 _entity_cache: dict[str, set[str]] = {}
 _sub_lock = asyncio.Lock()
+# What put_nowait raises on a queue that cannot take the event: full, or (on
+# Python 3.13 and later) shut down.
+_QUEUE_GONE = (asyncio.QueueFull, *((asyncio.QueueShutDown,) if hasattr(asyncio, "QueueShutDown") else ()))
 
 
 async def subscribe(token_id: str) -> asyncio.Queue:
@@ -197,6 +200,26 @@ async def broadcast_schedule_changed(token_id: str) -> None:
         try:
             q.put_nowait(event)
         except asyncio.QueueFull:
+            pass
+
+
+async def broadcast_schedule_changed_all() -> None:
+    """Push schedule_changed to every SSE connection, whatever its token.
+
+    Sent when a setting every guest page draws at load changes: the welcome
+    text, or the phone region its links are read in. The same event as
+    broadcast_schedule_changed, carrying no data, so every open page reloads
+    and reads the new value through every gate. The queues are copied under
+    the lock, so a stream that connects or hangs up meanwhile cannot break
+    the loop, and a full queue only misses this one event.
+    """
+    event = {"type": "schedule_changed"}
+    async with _sub_lock:
+        queues = [q for qs in _subscriptions.values() for q in qs]
+    for q in queues:
+        try:
+            q.put_nowait(event)
+        except _QUEUE_GONE:
             pass
 
 
@@ -398,34 +421,77 @@ async def get_home_zone() -> dict[str, float] | None:
 # it is in now — and dropping it would close every windowed link for as long
 # as HA was unreachable. Retries after a failure are spaced so a down HA is
 # not asked again on every guest request.
+#
+# The house's country comes from the same /api/config response, for reading
+# national phone numbers in the guest info text (see app/region.py). One
+# request fills both values and one window (_time_zone_next_read) governs
+# both, so a page that wants the zone and the country costs a single call.
 TIME_ZONE_CACHE_TTL = 3600
 TIME_ZONE_RETRY_SECONDS = 60
 
 _time_zone: str | None = None
 _time_zone_next_read: float = 0.0
+_country: str | None = None
 
 
-async def get_time_zone() -> str | None:
-    """Return HA's configured IANA time zone name, or None if never read."""
-    global _time_zone, _time_zone_next_read
+def _normalise_country(value: Any) -> str | None:
+    """HA's ISO 3166-1 alpha-2 country, upper-cased, or None.
+
+    HA sends a code or null, but the value ends up choosing how phone numbers
+    are dialled, so anything that is not two letters (a country name, a
+    number, a list) is treated as no country rather than passed along.
+    """
+    if not isinstance(value, str):
+        return None
+    value = value.strip().upper()
+    if len(value) == 2 and value.isascii() and value.isalpha():
+        return value
+    return None
+
+
+async def _read_config() -> None:
+    """Refresh the cached time zone and country from /api/config when due.
+
+    A successful read always replaces the country, null included: an admin
+    who clears the country in HA should see that reach the guest page once
+    the window passes. A failed read changes neither value. The time zone
+    keeps its own rule on top of that: a missing or blank zone in an
+    otherwise good response is not stored, and is retried soon.
+    """
+    global _time_zone, _time_zone_next_read, _country
     now = time.monotonic()
     if now < _time_zone_next_read:
-        return _time_zone
+        return
 
     try:
         resp = await _require_client().get("/api/config")
         resp.raise_for_status()
-        name = resp.json().get("time_zone")
+        config = resp.json()
+        name = config.get("time_zone")
+        country = _normalise_country(config.get("country"))
     except Exception:
-        logger.warning("Could not read Home Assistant's time zone from /api/config")
+        logger.warning("Could not read Home Assistant's time zone and country from /api/config")
         name = None
+    else:
+        _country = country
 
     if isinstance(name, str) and name:
         _time_zone = name
         _time_zone_next_read = now + TIME_ZONE_CACHE_TTL
     else:
         _time_zone_next_read = now + TIME_ZONE_RETRY_SECONDS
+
+
+async def get_time_zone() -> str | None:
+    """Return HA's configured IANA time zone name, or None if never read."""
+    await _read_config()
     return _time_zone
+
+
+async def get_country() -> str | None:
+    """Return HA's configured country code ("CA"), or None if unset or never read."""
+    await _read_config()
+    return _country
 
 
 async def validate_connectivity() -> None:
