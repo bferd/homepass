@@ -597,6 +597,9 @@ async def update_token_info(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit the info text of a revoked token",
         )
+    if body.info_text is None and body.info_text_in_footer is None:
+        # Nothing to change, so no open guest page needs to reload.
+        return _row_to_response(row)
     await db.set_token_info(token_id, body.info_text, body.info_text_in_footer)
     await ha_client.broadcast_schedule_changed(token_id)
     row = await db.get_token_by_id(token_id)
