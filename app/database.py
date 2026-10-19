@@ -523,10 +523,10 @@ async def set_token_info(
     footer = None if info_text_in_footer is None else int(info_text_in_footer)
     await db.execute(
         "UPDATE tokens SET "
-        "info_text = CASE WHEN ? IS NULL THEN info_text ELSE ? END, "
-        "info_text_in_footer = CASE WHEN ? IS NULL THEN info_text_in_footer ELSE ? END "
+        "info_text = COALESCE(?, info_text), "
+        "info_text_in_footer = COALESCE(?, info_text_in_footer) "
         "WHERE id = ?",
-        (info_text, info_text, footer, footer, token_id),
+        (info_text, footer, token_id),
     )
     await db.commit()
 

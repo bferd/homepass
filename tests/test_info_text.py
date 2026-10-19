@@ -288,6 +288,14 @@ async def test_patch_placement_only_tells_open_pages_to_reload(client, admin_ses
     mock_ha_client["broadcast_schedule_changed"].assert_awaited_once_with(t["id"])
 
 
+async def test_empty_patch_changes_nothing_and_tells_no_one(client, admin_session, mock_ha_client):
+    t = await _token(info_text="Keep", info_text_in_footer=True)
+    resp = await _info(client, admin_session, t["id"], {})
+    assert resp.status_code == 200
+    assert (resp.json()["info_text"], resp.json()["info_text_in_footer"]) == ("Keep", True)
+    mock_ha_client["broadcast_schedule_changed"].assert_not_awaited()
+
+
 async def test_refused_patch_tells_no_one(client, admin_session, mock_ha_client):
     revoked = await _token(slug="revoked", info_text="Keep")
     await db.revoke_token(revoked["id"])
