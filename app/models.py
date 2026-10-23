@@ -255,7 +255,7 @@ def clean_group_headings(value: Any) -> Any:
         raise ValueError(f"group_headings can have at most {GROUP_HEADINGS_MAX} entries")
     cleaned: dict[str, dict[str, Any]] = {}
     for key, entry in value.items():
-        if not isinstance(key, str) or not _GROUP_KEY.match(key):
+        if not isinstance(key, str) or not _GROUP_KEY.fullmatch(key):
             raise ValueError("group_headings keys must be lower-case letters and underscores")
         if not isinstance(entry, dict):
             raise ValueError(f"group_headings.{key} must be an object")
