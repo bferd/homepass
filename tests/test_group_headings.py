@@ -173,13 +173,15 @@ MODEL_IDS = ["create", "entities", "api-update"]
     {"light-1": {"name": "x"}},
     {"light1": {"name": "x"}},
     {"": {"name": "x"}},
+    {"light\n": {"name": "x"}},
     {"light": "Lamps"},
     {"light": {"name": 5}},
     {"light": {"name": "x" * (DISPLAY_NAME_MAX + 1)}},
     {f"k{'_' * i}": {"locked": True} for i in range(GROUP_HEADINGS_MAX + 1)},
     ["light"],
     "light",
-], ids=["upper-case", "dot", "hyphen", "digit", "empty-key", "entry-not-object",
+], ids=["upper-case", "dot", "hyphen", "digit", "empty-key", "trailing-newline",
+        "entry-not-object",
         "name-not-string", "name-too-long", "too-many-keys", "list", "string"])
 def test_bad_headings_are_refused(make, bad):
     with pytest.raises(ValidationError):
