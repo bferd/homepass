@@ -278,10 +278,34 @@ async def test_group_headings_are_quiet_real_headings(client, sample_token, mock
     renderAll();
     console.log(JSON.stringify(document.getElementById('cards-container').innerHTML));
     """)
-    headings = re.findall(r"<h2 [^>]*>([^<]*)</h2>", out)
+    headings = re.findall(r"<h2 [^>]*>.*?<span>([^<]*)</span></button></h2>", out)
     assert headings == ["Lights", "Locks"]
     # No competing domain icon or shouty mono caps in the heading any more.
     assert "uppercase" not in re.search(r"<h2 [^>]*>", out).group(0)
+
+
+@needs_node
+async def test_switches_and_input_booleans_share_one_section(client, sample_token, mock_ha_client):
+    """Both domains are called "Switches", so the guest sees one section of
+    that name holding both, sorted together by name, not two headings."""
+    out = await _run(client, """
+    entityMeta = {};
+    entityOrder = ['switch.b', 'input_boolean.a', 'light.c', 'input_button.d', 'button.e'];
+    states = {
+      'switch.b': { entity_id: 'switch.b', state: 'off', attributes: { friendly_name: 'Beta' } },
+      'input_boolean.a': { entity_id: 'input_boolean.a', state: 'on', attributes: { friendly_name: 'Alpha' } },
+      'light.c': { entity_id: 'light.c', state: 'off', attributes: { friendly_name: 'Lamp' } },
+      'input_button.d': { entity_id: 'input_button.d', state: 'unknown', attributes: { friendly_name: 'Doorbell' } },
+      'button.e': { entity_id: 'button.e', state: 'unknown', attributes: { friendly_name: 'Echo' } },
+    };
+    renderAll();
+    console.log(JSON.stringify(document.getElementById('cards-container').innerHTML));
+    """)
+    headings = re.findall(r"<h2 [^>]*>.*?<span>([^<]*)</span></button></h2>", out)
+    assert headings == ["Lights", "Switches", "Buttons"]
+    switches = re.search(r'<div id="group-switch"[^>]*>(.*?)<h2', out, re.S).group(1)
+    assert switches.index("card-input_boolean") < switches.index("card-switch")
+    assert 'id="group-input_boolean"' not in out and 'id="group-input_button"' not in out
 
 
 def test_every_state_colour_class_is_one_tailwind_can_see():

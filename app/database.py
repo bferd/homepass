@@ -106,6 +106,7 @@ async def create_token(
     show_remaining_uses: bool = False,
     info_text: str = "",
     info_text_in_footer: bool = False,
+    group_headings: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     db = await get_db()
     token_id = str(uuid.uuid4())
@@ -123,12 +124,12 @@ async def create_token(
             """INSERT INTO tokens
                (id, slug, label, created_at, starts_at, expires_at, ip_allowlist, pin_hash,
                 access_windows, max_uses, remember_pin, device_binding, country_allowlist,
-                show_remaining_uses, info_text, info_text_in_footer)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                show_remaining_uses, info_text, info_text_in_footer, group_headings)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (token_id, slug, label, now, starts_at, expires_at, ip_json, pin_hash,
              windows_json, max_uses, int(bool(remember_pin)), int(bool(device_binding)),
              country_json, int(bool(show_remaining_uses)), info_text,
-             int(bool(info_text_in_footer))),
+             int(bool(info_text_in_footer)), json.dumps(group_headings or {})),
         )
         if entity_ids:
             meta = entity_meta or {}
@@ -527,6 +528,40 @@ async def set_token_info(
         "info_text_in_footer = COALESCE(?, info_text_in_footer) "
         "WHERE id = ?",
         (info_text, footer, token_id),
+    )
+    await db.commit()
+
+
+def group_headings_from_row(raw: str | None) -> dict[str, dict[str, Any]]:
+    """The stored section headings as a dict; {} is every heading as default.
+
+    The column is written only through the validated request models, so an
+    unreadable value means a hand-edited database. It reads as "all defaults"
+    rather than failing the guest page, because a heading is presentation and
+    nothing about access depends on it.
+    """
+    try:
+        value = json.loads(raw or "{}")
+    except (ValueError, TypeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+async def set_token_group_headings(
+    token_id: str,
+    group_headings: dict[str, dict[str, Any]] | None,
+) -> None:
+    """Replace a link's section headings. None leaves them as stored.
+
+    The same None rule set_token_info follows, so a caller that only changes
+    the entities cannot reset the headings by omission. {} is a value and
+    puts every heading back to its default.
+    """
+    value = None if group_headings is None else json.dumps(group_headings)
+    db = await get_db()
+    await db.execute(
+        "UPDATE tokens SET group_headings = COALESCE(?, group_headings) WHERE id = ?",
+        (value, token_id),
     )
     await db.commit()
 

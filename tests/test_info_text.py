@@ -73,8 +73,8 @@ def _columns(db_file) -> list[str]:
         return [r[1] for r in conn.execute("PRAGMA table_info(tokens)")]
 
 
-def test_head_is_014():
-    assert ScriptDirectory.from_config(Config("alembic.ini")).get_current_head() == "014"
+def test_head_is_015():
+    assert ScriptDirectory.from_config(Config("alembic.ini")).get_current_head() == "015"
 
 
 def test_upgrade_gives_existing_tokens_no_info_text(tmp_path, monkeypatch):

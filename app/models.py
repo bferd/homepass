@@ -1,4 +1,5 @@
 """Pydantic request/response models."""
+import re
 from typing import Annotated, Any
 from urllib.parse import urlsplit
 
@@ -220,6 +221,60 @@ def clean_info_text(value: Any) -> Any:
     return value
 
 
+# Per-link section headings on the guest page, keyed by group key (see
+# groupKey() in static/domains.js and migration 015). Thirty is more than the
+# number of distinct sections the guest page can draw, so a client that sends
+# more is sending something other than headings.
+GROUP_HEADINGS_MAX = 30
+_GROUP_KEY = re.compile(r"^[a-z_]+$")
+
+
+def clean_group_headings(value: Any) -> Any:
+    """Check and normalise a section-headings object. Returns the stored shape.
+
+    {"<group_key>": {"name": str, "locked": bool}}. The name is trimmed and
+    capped at DISPLAY_NAME_MAX, "" (or null) meaning the default heading;
+    locked (the guest cannot collapse the section) is coerced to bool. Any
+    other field in an entry is ignored. An entry that changes nothing is dropped, so
+    the result only ever holds headings the admin actually changed, and {}
+    means every heading as default.
+
+    The keys are checked for shape only, never against the token's entities:
+    a PATCH may change the entities in the same request, and a heading for a
+    section the link no longer has is simply never drawn.
+
+    Run as a field validator, so a refusal is a 422 whose `input` is this
+    field alone and never the rest of the body (which can carry a PIN).
+    None passes through: on an update it means "keep what is stored".
+    """
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("group_headings must be an object")
+    if len(value) > GROUP_HEADINGS_MAX:
+        raise ValueError(f"group_headings can have at most {GROUP_HEADINGS_MAX} entries")
+    cleaned: dict[str, dict[str, Any]] = {}
+    for key, entry in value.items():
+        if not isinstance(key, str) or not _GROUP_KEY.match(key):
+            raise ValueError("group_headings keys must be lower-case letters and underscores")
+        if not isinstance(entry, dict):
+            raise ValueError(f"group_headings.{key} must be an object")
+        name = entry.get("name")
+        if name is None:
+            name = ""
+        if not isinstance(name, str):
+            raise ValueError(f"group_headings.{key}.name must be a string")
+        name = name.strip()
+        if len(name) > DISPLAY_NAME_MAX:
+            raise ValueError(
+                f"group_headings.{key}.name can be at most {DISPLAY_NAME_MAX} characters"
+            )
+        locked = bool(entry.get("locked"))
+        if name or locked:
+            cleaned[key] = {"name": name, "locked": locked}
+    return cleaned
+
+
 class TokenCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=200)
     slug: str | None = Field(default=None, pattern=r"^[a-z0-9_-]{1,64}$")
@@ -270,8 +325,15 @@ class TokenCreateRequest(BaseModel):
     # the top with the welcome text.
     info_text: str = Field(default="", max_length=INFO_TEXT_MAX)
     info_text_in_footer: bool = False
+    # Rename the guest page's section headings, or stop the guest collapsing
+    # a section. None and {} both mean every heading as default. See
+    # clean_group_headings.
+    group_headings: dict[str, Any] | None = None
 
     _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
+    _clean_group_headings = field_validator("group_headings", mode="before")(
+        clean_group_headings
+    )
 
 
 class TokenInfoRequest(BaseModel):
@@ -325,6 +387,13 @@ class TokenPinRequest(BaseModel):
 class TokenUpdateEntitiesRequest(BaseModel):
     entity_ids: list[str] = Field(..., min_length=1)
     entity_meta: dict[str, dict[str, Any]] | None = None
+    # Saved with the entities because the dashboard edits both in one form.
+    # None keeps the stored headings; {} resets them all.
+    group_headings: dict[str, Any] | None = None
+
+    _clean_group_headings = field_validator("group_headings", mode="before")(
+        clean_group_headings
+    )
 
 
 class EntityMetaRequest(BaseModel):
@@ -486,8 +555,13 @@ class ApiTokenUpdateRequest(BaseModel):
     # Same as the dashboard's info dialog: None keeps, "" clears.
     info_text: str | None = Field(default=None, max_length=INFO_TEXT_MAX)
     info_text_in_footer: bool | None = None
+    # Same as the dashboard's Section headings: None keeps, {} resets.
+    group_headings: dict[str, Any] | None = None
 
     _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
+    _clean_group_headings = field_validator("group_headings", mode="before")(
+        clean_group_headings
+    )
 
 
 class ApiTokenRenewRequest(BaseModel):
@@ -503,7 +577,7 @@ class ApiTokenDuplicateRequest(BaseModel):
     What is copied and what is not follows the dashboard's Duplicate: the
     entities, the IP and country allowlists, the weekly windows, the use limit
     (with a fresh count), remember-PIN, the device-lock setting, the info
-    text and where it is shown carry over;
+    text and where it is shown, and the section headings carry over;
     the slug, the PIN, the scheduled start, a device claim and links without
     PIN do not, because they belong to one guest's stay. With no expiry given,
     a never-expiring source gives a never-expiring copy and anything else gets
@@ -522,6 +596,13 @@ class ApiEntityMeta(BaseModel):
     options: dict[str, Any] = Field(default_factory=dict)
     require_proximity: bool = False
     require_local_network: bool = False
+
+
+class ApiGroupHeading(BaseModel):
+    """One changed section heading. An empty name is the default heading;
+    locked means the guest cannot collapse the section."""
+    name: str = ""
+    locked: bool = False
 
 
 class ApiAccessCode(BaseModel):
@@ -565,6 +646,9 @@ class ApiTokenResponse(BaseModel):
     show_remaining_uses: bool
     info_text: str
     info_text_in_footer: bool
+    # Only the headings the admin changed, keyed by group key; {} is all
+    # defaults.
+    group_headings: dict[str, ApiGroupHeading]
     country_allowlist: list[str] | None
     device_binding: bool
     device_bound_at: int | None

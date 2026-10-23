@@ -117,6 +117,11 @@
   @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(8px); } }
   .toast-in { animation: toastIn .25s ease-out; }
   .toast-out { animation: toastOut .2s ease-in forwards; }
+  /* A section heading's chevron points down while the section shows and turns
+     to point at the heading text while it is shut. */
+  .group-chevron { transition: transform .15s ease-out; }
+  .group-toggle[aria-expanded="false"] .group-chevron { transform: rotate(-90deg); }
+  @media (prefers-reduced-motion: reduce) { .group-chevron { transition: none; } }
   /* The welcome and info text: the admin's own line breaks kept, and a long
      URL broken anywhere rather than pushing the page sideways. The links in
      it come from app/linkify.py as bare <a> tags, so they are styled here. */
@@ -479,6 +484,7 @@ const PENDING_REASON = {{ pending_reason | tojson }};
 const WINDOW_CLOSES_AT = {{ window_closes_at | tojson }};
 const PREVIEW_ENTITY_IDS = {{ preview_entity_ids | tojson }};
 const PREVIEW_ENTITY_META = {{ preview_entity_meta | tojson }};
+const PREVIEW_GROUP_HEADINGS = {{ preview_group_headings | tojson }};
 // The countdown is measured against the server's clock, not the device's: a
 // phone a few minutes fast would otherwise reload early, be refused, and do it
 // again forever. The offset is taken once, at load.
@@ -487,6 +493,12 @@ let states = {};
 // Per-token overrides: { entity_id: {display_name, options, require_proximity} }
 let entityMeta = {};
 let entityOrder = [];
+// The admin's renamed and locked section headings: { group_key: {name, locked} }.
+let groupHeadings = {};
+// Group keys of the sections the guest has shut. Held for this page view only,
+// never stored: every load opens with every section showing, so a guest is
+// never left wondering where a control went.
+const collapsedGroups = new Set();
 let sheetCallback = null;
 let sseRetryCount = 0;
 
@@ -534,6 +546,7 @@ async function init() {
     states = data.states;
     entityOrder = data.entities;
     entityMeta = data.entity_meta || {};
+    groupHeadings = data.group_headings || {};
     renderAll();
     connectSSE();
   } catch (e) {
@@ -570,6 +583,7 @@ let pendingEventSource = null;
 function startPending() {
   entityOrder = PREVIEW_ENTITY_IDS;
   entityMeta = PREVIEW_ENTITY_META;
+  groupHeadings = PREVIEW_GROUP_HEADINGS;
   states = {};
   for (const eid of entityOrder) {
     states[eid] = {
@@ -720,6 +734,7 @@ async function refetchState() {
     const data = await r.json();
     states = data.states;
     entityOrder = data.entities;
+    groupHeadings = data.group_headings || {};
     renderAll();
   } catch {}
 }
@@ -775,36 +790,66 @@ function renderAll() {
     return;
   }
 
+  // By group key, not domain, so input_boolean shares the one "Switches"
+  // section with switch rather than drawing a second heading of the same name.
   const groups = {};
   for (const eid of entityOrder) {
-    const domain = eid.split('.')[0];
-    if (!groups[domain]) groups[domain] = [];
-    groups[domain].push(eid);
+    const key = groupKey(eid.split('.')[0]);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(eid);
   }
 
-  const sortedDomains = Object.keys(groups).sort((a, b) => {
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
     const ia = DOMAIN_ORDER.indexOf(a);
     const ib = DOMAIN_ORDER.indexOf(b);
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
   let html = '';
-  for (const domain of sortedDomains) {
-    const label = domainLabel(domain);
-    // Quieter than the cards under it: a heading that competes with the
-    // entities makes the list harder to scan, not easier. A real heading
-    // element, so a screen reader can jump from one group to the next.
-    html += `<h2 class="pt-5 pb-2 px-1 text-[13px] font-semibold text-muted">${esc(label)}</h2>`;
-    // Within a domain, order by what the guest actually sees: the per-token
+  for (const key of sortedKeys) {
+    const heading = groupHeadings[key] || {};
+    // Within a section, order by what the guest actually sees: the per-token
     // display name if set, then the HA friendly name, then the entity id.
-    const ordered = groups[domain].slice().sort((a, b) =>
+    const ordered = groups[key].slice().sort((a, b) =>
       displayName(a, states[a]).localeCompare(displayName(b, states[b]), undefined, { sensitivity: 'base' })
     );
-    for (const eid of ordered) {
-      html += buildCard(eid, states[eid]);
+    const cards = ordered.map(eid => buildCard(eid, states[eid])).join('');
+    const label = heading.name || domainLabel(key);
+    // Quieter than the cards under it: a heading that competes with the
+    // entities makes the list harder to scan, not easier. A real heading
+    // element, so a screen reader can jump from one section to the next.
+    const h2 = '<h2 class="pt-5 pb-2 px-1 text-[13px] font-semibold text-muted">';
+    // A locked section's heading is plain text with nothing to tap, and the
+    // collapsed state never applies to it, so its entities always show.
+    if (heading.locked) {
+      html += `${h2}${esc(label)}</h2><div data-group="${esc(key)}">${cards}</div>`;
+      continue;
     }
+    const open = !collapsedGroups.has(key);
+    // The button inside the heading is what opens and shuts the section.
+    html += h2
+      + `<button type="button" data-action="group-toggle" data-group="${esc(key)}"`
+      + ` aria-expanded="${open}" aria-controls="group-${esc(key)}"`
+      + ` class="group-toggle inline-flex items-center gap-1 pr-1 rounded-md text-left">`
+      + `<span aria-hidden="true" class="group-chevron material-symbols-outlined text-base">expand_more</span>`
+      + `<span>${esc(label)}</span></button></h2>`;
+    html += `<div id="group-${esc(key)}" data-group="${esc(key)}"${open ? '' : ' hidden'}>${cards}</div>`;
   }
   container.innerHTML = html;
+}
+
+// Opens or shuts one section in place, without a re-render, so a slider
+// mid-drag or a sheet open elsewhere on the page is left alone. The state
+// lives in collapsedGroups so a later renderAll() (a reconnect's refetch)
+// draws the section the way the guest left it.
+function toggleGroup(button) {
+  const key = button.dataset.group;
+  const open = button.getAttribute('aria-expanded') !== 'true';
+  if (open) collapsedGroups.delete(key);
+  else collapsedGroups.add(key);
+  button.setAttribute('aria-expanded', String(open));
+  const body = document.getElementById(`group-${key}`);
+  if (body) body.hidden = !open;
 }
 
 function buildCard(eid, state) {
@@ -2205,6 +2250,9 @@ document.addEventListener('click', e => {
       break;
     // Defined by the script right after the info card, which only exists,
     // with these buttons, when there is text to show.
+    case 'group-toggle':
+      toggleGroup(el);
+      break;
     case 'info-collapse':
       collapseInfoCard();
       break;

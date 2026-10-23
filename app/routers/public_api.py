@@ -169,7 +169,8 @@ async def get_token(token_id: str) -> dict:
 @router.patch("/tokens/{token_id}", response_model=ApiTokenResponse)
 async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
     """Change any of label, entities, expiry, PIN, remember-PIN, the
-    device lock, the remaining-uses counter and the info text in one call.
+    device lock, the remaining-uses counter, the info text and the section
+    headings in one call.
 
     Everything is validated before anything is written, so a bad PIN does not
     leave the entity list changed. The expiry change leaves a revocation in
@@ -193,6 +194,13 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit the info text of a revoked token",
+        )
+    if body.group_headings is not None and row["revoked"]:
+        # The dashboard saves the headings with the entities, so the same
+        # refusal as its entity editor.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the section headings of a revoked token",
         )
 
     if body.label is not None:
@@ -226,10 +234,11 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
         )
     if body.show_remaining_uses is not None:
         await db.set_show_remaining_uses(token_id, body.show_remaining_uses)
-    if body.show_remaining_uses is not None or info_change:
-        # Open guest pages draw the counter and the info text at load; reload
-        # them once, after every write, so the change shows now, as it does
-        # after the dashboard's Schedule or Guest info.
+    headings_changed = await admin._set_group_headings_if_changed(row, body.group_headings)
+    if body.show_remaining_uses is not None or info_change or headings_changed:
+        # Open guest pages draw the counter, the info text and the section
+        # headings at load; reload them once, after every write, so the change
+        # shows now, as it does after the dashboard's Schedule or Guest info.
         await ha_client.broadcast_schedule_changed(token_id)
     return await _full_token(token_id)
 
@@ -343,7 +352,8 @@ async def rotate_token_slug(token_id: str) -> dict:
 )
 async def duplicate_token(token_id: str, body: ApiTokenDuplicateRequest | None = None) -> dict:
     """Create a new token from an existing one's entities, allowlists, weekly
-    windows, use limit, remember-PIN and device-lock settings.
+    windows, use limit, remember-PIN, device-lock settings, info text and
+    section headings.
 
     The slug, PIN and scheduled start are not copied; pass new ones in the
     body if the copy needs them. The use count starts at zero, and a device
@@ -395,6 +405,8 @@ async def duplicate_token(token_id: str, body: ApiTokenDuplicateRequest | None =
         # Guidance for the place, not the guest, so the copy keeps it.
         info_text=row["info_text"],
         info_text_in_footer=bool(row["info_text_in_footer"]),
+        # Presentation of the same entities, so it travels with them.
+        group_headings=db.group_headings_from_row(row["group_headings"]),
         country_allowlist=(
             json.loads(row["country_allowlist"]) if row["country_allowlist"] else None
         ),

@@ -168,12 +168,12 @@ Each token's card offers:
 - **Extend** — push the expiry out. It reads **Renew** on a link that has already expired, been revoked or been used up.
 - **Schedule** — change the start, end, weekly times or use limit. See [When a link works](#when-a-link-works).
 - **Guest info** — change the link's own text for the guest, or move it to the footer. See [Guest info text](#guest-info-text).
-- **Edit Entities** — change what is on the link, including the per-entity options.
+- **Edit Entities** — change what is on the link, including the per-entity options and the section headings. See [Section headings](#section-headings).
 - **Add PIN / PIN Protected** — set, change or remove the PIN, choose whether it is remembered, and manage links without PIN.
 - **Copy link without PIN / QR without PIN** — on PIN-protected links only; see above.
 - **Rotate Link** — generate a new link and kill the old one immediately. Entities, options, expiry, PIN and history are kept, so use this instead of rebuilding a token when a link has reached the wrong person. A guest who had entered the PIN is asked for it again, links without PIN are retired, and a device lock is released.
 - **Lock to One Device / Unbind Device** — lock the link to the first browser that claims it, or release the claim so the next device can take it.
-- **Duplicate** — start a new link pre-filled with this one's entities and their settings (display names, location and home-network requirements), IP allowlist, country allowlist, device-lock and remember-PIN settings, guest info text, and timing: the same mode, use limit, weekly times and length, starting now. The PIN itself is not copied.
+- **Duplicate** — start a new link pre-filled with this one's entities and their settings (display names, location and home-network requirements), IP allowlist, country allowlist, device-lock and remember-PIN settings, guest info text, section headings, and timing: the same mode, use limit, weekly times and length, starting now. The PIN itself is not copied.
 - **Revoke** — stop the link working, keeping its history.
 - **Delete** — remove the token and its history.
 
@@ -225,6 +225,25 @@ Anyone who can open the link can read its text, and so can anyone they forward i
 
 In the [Public API](#public-api), `info_text` and `info_text_in_footer` can be set when creating a token and changed with `PATCH /api/v1/tokens/{id}`, are copied by duplicate, and are included in every token response. An empty `info_text` removes the text, and a `PATCH` that changes either field reloads the link's open guest pages. A revoked token's text cannot be changed.
 
+## Section headings
+
+The guest page groups a link's entities into sections under headings such as "Lights" or "Switches". Switches and `input_boolean` share one section, as do `button` and `input_button`, and `datetime` and `input_datetime`.
+
+The create form and **Edit Entities** have one row per section on the link:
+
+- **Type a name** of up to 64 characters to replace the heading. Blank keeps the default heading, and a typed name is shown as typed in every language.
+- **Don't allow collapsing** keeps the section always open, with its heading shown as plain text.
+
+Guests can tap a heading to collapse or expand its section. This lasts only while the page is open: every visit and reload starts fully open, and a section with **Don't allow collapsing** ticked cannot be collapsed.
+
+Changing a link's headings reloads its open guest pages, and **Duplicate** copies them.
+
+In the [Public API](#public-api), `group_headings` is accepted on create and `PATCH /api/v1/tokens/{id}` and returned in every token response; an empty `name` keeps the usual heading, and `{}` resets all:
+
+```json
+{"light": {"name": "Lamps", "locked": false}, "switch": {"name": "", "locked": true}}
+```
+
 ## Public API
 
 An optional REST API lets Home Assistant automations, Node-RED or any HTTP client manage tokens without the dashboard. It is off until you turn on **Enable API** and set an **API Token** of at least 32 characters (`openssl rand -hex 32` makes a good one), then restart the add-on.
@@ -236,7 +255,7 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `GET` | `/api/v1/tokens` | List tokens |
 | `POST` | `/api/v1/tokens` | Create a token |
 | `GET` | `/api/v1/tokens/{id}` | One token, with entities and per-entity options |
-| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter or the guest info text |
+| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter, the guest info text or the section headings |
 | `PUT` | `/api/v1/tokens/{id}/schedule` | Replace start, end, weekly times and use limit |
 | `POST` | `/api/v1/tokens/{id}/unbind` | Release a device lock's claim |
 | `GET` / `POST` | `/api/v1/tokens/{id}/access-codes` | List or make links without PIN (a new code is shown once) |
@@ -246,7 +265,7 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `POST` | `/api/v1/tokens/{id}/renew` | New expiry, and un-revoke |
 | `POST` | `/api/v1/tokens/{id}/activate` | Start a scheduled token now |
 | `POST` | `/api/v1/tokens/{id}/rotate-slug` | New link, old one stops working |
-| `POST` | `/api/v1/tokens/{id}/duplicate` | Copy entities, options, allowlists, weekly times, use limit, remember-PIN and device-lock settings and guest info text into a new token |
+| `POST` | `/api/v1/tokens/{id}/duplicate` | Copy entities, options, allowlists, weekly times, use limit, remember-PIN and device-lock settings, guest info text and section headings into a new token |
 
 Anything that sets an expiry takes either `expires_at` (Unix seconds — handy for a check-out time) or `expires_in_seconds`, not both. Creating a token runs the same checks as the dashboard and accepts every field the dashboard sets — weekly times, use limit, remember-PIN, device lock and country allowlist included. Responses never include a PIN, only `has_pin`.
 
@@ -254,7 +273,7 @@ With the API enabled, the dashboard header gets an **API Docs** link to an inter
 
 ## Languages
 
-Guest links show in the guest's own browser language when it is one of the 24 official EU languages, and in English otherwise. The admin dashboard is in English or Spanish: it follows your browser, and **Settings → Language** pins one for the browser you are using. The app name, contact message, welcome text, guest info text, token labels and display names you set are not translated: they are shown as you typed them in every language, with the welcome and guest info text's formatting tags applied.
+Guest links show in the guest's own browser language when it is one of the 24 official EU languages, and in English otherwise. The admin dashboard is in English or Spanish: it follows your browser, and **Settings → Language** pins one for the browser you are using. The app name, contact message, welcome text, guest info text, section heading names, token labels and display names you set are not translated: they are shown as you typed them in every language, with the welcome and guest info text's formatting tags applied.
 
 ## Notifications
 

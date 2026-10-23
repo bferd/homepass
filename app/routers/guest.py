@@ -1048,9 +1048,9 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
         # so a phone whose time is minutes out still unlocks when the server
         # says so instead of reloading early into another refusal.
         "server_now": int(time.time()),
-        # The preview is built from these two and nothing else. Entity IDs give
-        # the domains, and so the icons, grouping and order; the overrides give
-        # the names the admin chose. No Home Assistant state is read here, and
+        # The preview is built from the preview_* values below and nothing
+        # else. Entity IDs give the domains, and so the icons, grouping and
+        # order; the overrides give the names and headings the admin chose. No Home Assistant state is read here, and
         # none is reachable from the page until it reloads as an active one.
         # Only set when the admin turned the counter on AND the link has a use
         # limit; None means the page draws no counter at all. Never set on a
@@ -1062,6 +1062,10 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
         ),
         "preview_entity_ids": await db.get_token_entities(row["id"]) if pending else [],
         "preview_entity_meta": await db.get_token_entity_meta(row["id"]) if pending else {},
+        # The section headings, so the preview groups the way the live page will.
+        "preview_group_headings": (
+            db.group_headings_from_row(row["group_headings"]) if pending else {}
+        ),
         **await _info_context(row, pending),
     })
     response = templates.TemplateResponse(request, "guest_pwa.html", ctx)
@@ -1298,7 +1302,15 @@ async def guest_state(request: Request, slug: str = Path(max_length=64)):
     # uses it to mark which controls will ask for a location, and it is
     # false everywhere on a token with no gated entity.
     meta = await db.get_token_entity_meta(row["id"])
-    return {"entities": entity_ids, "states": states, "entity_meta": meta}
+    # The admin's renamed and locked section headings, by group key. Sent with
+    # every /state rather than rendered into the page, so a refetch after a
+    # reconnect draws the sections the same way the first load did.
+    return {
+        "entities": entity_ids,
+        "states": states,
+        "entity_meta": meta,
+        "group_headings": db.group_headings_from_row(row["group_headings"]),
+    }
 
 
 # ---------------------------------------------------------------------------
