@@ -152,7 +152,7 @@ async def test_branding_defaults_to_empty(client, admin_session):
     {"eyebrow": "x" * 41},
     {"title": "x" * 81},
     {"logo_height": 23},
-    {"logo_height": 97},
+    {"logo_height": 65},
     {"logo_height": "40"},
     {"colors": {"brand_primary": "#aa0000"}},
 ])
@@ -381,3 +381,71 @@ async def test_blocked_visitor_learns_nothing_of_the_branding(client, mock_ha_cl
     await _branded("hidden", ip_allowlist=["203.0.113.0/24"])
     r = await client.get("/g/hidden")
     assert "Welcome" not in r.text and "Be-Nith" not in r.text and "/logo?v=" not in r.text
+
+
+async def test_branding_sits_in_the_pinned_header(client, mock_ha_client):
+    await _branded("hdr")
+    html = (await client.get("/g/hdr")).text
+    header = html[html.index("<header"):html.index("</header>")]
+    assert "/g/hdr/logo?v=" in header
+    assert ">Welcome<" in header
+    assert "Be-Nith &lt;b&gt;Cottage&lt;/b&gt;" in header
+    assert "person</span>" not in header          # the icon is replaced by the logo
+    assert "Cottage</div>" not in header.replace("Be-Nith &lt;b&gt;Cottage&lt;/b&gt;", "")  # label replaced
+    assert "/logo?v=" not in html[html.index("</header>"):]
+
+
+async def test_partial_branding_keeps_the_usual_parts(client, mock_ha_client):
+    t = await _make("part")
+    await db.set_token_branding(t["id"], branding.stored({"title": "Only a title"}))
+    html = (await client.get("/g/part")).text
+    header = html[html.index("<header"):html.index("</header>")]
+    assert "Only a title" in header
+    assert "person</span>" in header               # no logo, so the icon stays
+    assert settings.app_name.upper() in header.upper()   # no eyebrow, so the app name stays
+
+
+def test_stored_taller_logo_is_held_to_the_limit():
+    out = branding.from_row('{"logo_height": 90}')
+    assert out["logo_height"] == branding.LOGO_HEIGHT_MAX
+
+
+async def test_notify_false_saves_without_telling_open_pages(client, admin_session, mock_ha_client):
+    t = await _make("quiet")
+    mock_ha_client["broadcast_schedule_changed"].reset_mock()
+    r = await client.patch(f"/admin/tokens/{t['id']}/branding?notify=false", json={"title": "Q"}, cookies=admin_session)
+    assert r.status_code == 200 and r.json()["branding"]["title"] == "Q"
+    r = await _upload(client, admin_session, t["id"], png())
+    assert r.status_code == 200
+    mock_ha_client["broadcast_schedule_changed"].assert_called_once_with(t["id"])   # only the upload
+    mock_ha_client["broadcast_schedule_changed"].reset_mock()
+    await client.delete(f"/admin/tokens/{t['id']}/logo?notify=false", cookies=admin_session)
+    mock_ha_client["broadcast_schedule_changed"].assert_not_called()
+    assert await db.get_token_logo(t["id"]) is None
+
+
+@pytest.mark.parametrize("body", [
+    {"title_size": 13}, {"title_size": 29}, {"eyebrow_size": 9}, {"eyebrow_size": 19}, {"title_size": "16"},
+])
+async def test_text_size_validation(client, admin_session, body):
+    t = await _make()
+    r = await client.patch(f"/admin/tokens/{t['id']}/branding", json=body, cookies=admin_session)
+    assert r.status_code == 422
+
+
+async def test_text_sizes_default_save_and_reach_the_header(client, admin_session, mock_ha_client):
+    t = await _make("sizes")
+    got = (await client.get(f"/admin/tokens/{t['id']}", cookies=admin_session)).json()["branding"]
+    assert (got["title_size"], got["eyebrow_size"]) == (16, 12)
+    r = await client.patch(f"/admin/tokens/{t['id']}/branding", cookies=admin_session,
+                           json={"title": "Big", "eyebrow": "Small", "title_size": 26, "eyebrow_size": 10})
+    assert r.status_code == 200 and (r.json()["branding"]["title_size"], r.json()["branding"]["eyebrow_size"]) == (26, 10)
+    html = (await client.get("/g/sizes")).text
+    header = html[html.index("<header"):html.index("</header>")]
+    assert "font-size: 26px" in header and "font-size: 10px" in header
+
+
+def test_stored_text_sizes_are_clamped_and_defaults_not_stored():
+    out = branding.from_row('{"title_size": 99, "eyebrow_size": 1}')
+    assert (out["title_size"], out["eyebrow_size"]) == (branding.TITLE_SIZE_MAX, branding.EYEBROW_SIZE_MIN)
+    assert branding.stored({"title_size": 16, "eyebrow_size": 12}) == {}

@@ -5,7 +5,7 @@ Every part is optional. A link with none of them looks exactly as it did before.
 What is stored, in the ``tokens.branding`` JSON column (``{}`` is unbranded)::
 
     {"eyebrow": "Harvest Host", "title": "Be-Nith the Locust Trees",
-     "logo_height": 40,
+     "logo_height": 40, "title_size": 16, "eyebrow_size": 12,
      "colors": {"brand_primary": "#D9523C", "brand_bg": "#F2F0E9", ...},
      "logo": {"v": "3f2a9c1b7d04", "width": 256, "height": 256}}
 
@@ -29,8 +29,12 @@ EYEBROW_MAX = 40
 TITLE_MAX = 80
 
 LOGO_HEIGHT_MIN = 24
-LOGO_HEIGHT_MAX = 96
+LOGO_HEIGHT_MAX = 64
 LOGO_HEIGHT_DEFAULT = 40
+# Text sizes in px for the pinned header. The defaults are the size the header
+# has always used (16 for the label, 12 for the line under it).
+TITLE_SIZE_MIN, TITLE_SIZE_MAX, TITLE_SIZE_DEFAULT = 14, 28, 16
+EYEBROW_SIZE_MIN, EYEBROW_SIZE_MAX, EYEBROW_SIZE_DEFAULT = 10, 18, 12
 # A wide logo is held to this share of the page so it cannot squeeze the
 # eyebrow beside it off the row.
 LOGO_MAX_WIDTH_PERCENT = 50
@@ -105,6 +109,13 @@ def clean_colors(value):
 
 # ── the stored value ──────────────────────────────────────────────────────
 
+def _size(value, low, high, default) -> int:
+    """A stored text size: a whole number held to its range, else the default."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return default
+    return max(low, min(high, value))
+
+
 def from_row(raw) -> dict:
     """The stored branding with every key present.
 
@@ -128,11 +139,13 @@ def from_row(raw) -> dict:
         return cleaned[:limit]
 
     height = value.get("logo_height", LOGO_HEIGHT_DEFAULT)
-    if (
-        isinstance(height, bool) or not isinstance(height, int)
-        or not LOGO_HEIGHT_MIN <= height <= LOGO_HEIGHT_MAX
-    ):
+    if isinstance(height, bool) or not isinstance(height, int):
         height = LOGO_HEIGHT_DEFAULT
+    else:
+        # An older, taller setting is held to the new limit, not thrown away.
+        height = max(LOGO_HEIGHT_MIN, min(LOGO_HEIGHT_MAX, height))
+    title_size = _size(value.get("title_size"), TITLE_SIZE_MIN, TITLE_SIZE_MAX, TITLE_SIZE_DEFAULT)
+    eyebrow_size = _size(value.get("eyebrow_size"), EYEBROW_SIZE_MIN, EYEBROW_SIZE_MAX, EYEBROW_SIZE_DEFAULT)
     try:
         colors = clean_colors(value.get("colors"))
     except ValueError:
@@ -150,6 +163,8 @@ def from_row(raw) -> dict:
         "eyebrow": text("eyebrow", EYEBROW_MAX),
         "title": text("title", TITLE_MAX),
         "logo_height": height,
+        "title_size": title_size,
+        "eyebrow_size": eyebrow_size,
         "colors": colors,
         "logo": logo,
     }
@@ -164,6 +179,10 @@ def stored(branding: dict) -> dict:
         out["title"] = branding["title"]
     if branding.get("logo_height", LOGO_HEIGHT_DEFAULT) != LOGO_HEIGHT_DEFAULT:
         out["logo_height"] = branding["logo_height"]
+    if branding.get("title_size", TITLE_SIZE_DEFAULT) != TITLE_SIZE_DEFAULT:
+        out["title_size"] = branding["title_size"]
+    if branding.get("eyebrow_size", EYEBROW_SIZE_DEFAULT) != EYEBROW_SIZE_DEFAULT:
+        out["eyebrow_size"] = branding["eyebrow_size"]
     if branding.get("colors"):
         out["colors"] = branding["colors"]
     if branding.get("logo"):
@@ -183,6 +202,8 @@ def public(raw) -> dict:
         "eyebrow": b["eyebrow"],
         "title": b["title"],
         "logo_height": b["logo_height"],
+        "title_size": b["title_size"],
+        "eyebrow_size": b["eyebrow_size"],
         "colors": b["colors"],
         "logo": None if logo is None else {
             "version": logo["v"], "width": logo["width"], "height": logo["height"],
@@ -242,6 +263,8 @@ def page_context(row, base_path: str, slug: str) -> dict:
             "logo_width": round(logo["width"] * b["logo_height"] / logo["height"]) if logo else None,
             "logo_ratio": f"{logo['width']} / {logo['height']}" if logo else None,
             "logo_max_width": LOGO_MAX_WIDTH_PERCENT,
+            "title_size": b["title_size"],
+            "eyebrow_size": b["eyebrow_size"],
         }
     return ctx
 

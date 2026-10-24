@@ -2036,7 +2036,10 @@ async function duplicateToken(tokenId) {
 // saves straight away. The colour sample comes from the server, like the
 // settings one, so a blank colour is worked out in one place.
 const BRAND_EYEBROW_MAX = 40, BRAND_TITLE_MAX = 80;
-const BRAND_H_MIN = 24, BRAND_H_MAX = 96, BRAND_H_DEFAULT = 40;
+const BRAND_H_MIN = 24, BRAND_H_MAX = 64, BRAND_H_DEFAULT = 40;
+// Text sizes in px, the same limits and defaults as app/branding.py.
+const BRAND_TSIZE_MIN = 14, BRAND_TSIZE_MAX = 28, BRAND_TSIZE_DEFAULT = 16;
+const BRAND_ESIZE_MIN = 10, BRAND_ESIZE_MAX = 18, BRAND_ESIZE_DEFAULT = 12;
 const BRAND_LOGO_MAX_BYTES = 512 * 1024;
 const BRAND_COLOR_KEYS = [
   ['brand_primary', false], ['brand_secondary', true], ['brand_accent', true],
@@ -2050,7 +2053,8 @@ let brandPreviewTimer = null;
 let brandPreviewSeq = 0;
 
 function emptyBranding() {
-  return { eyebrow: '', title: '', height: BRAND_H_DEFAULT, useGlobal: true, colors: {},
+  return { eyebrow: '', title: '', height: BRAND_H_DEFAULT, titleSize: BRAND_TSIZE_DEFAULT,
+    eyebrowSize: BRAND_ESIZE_DEFAULT, useGlobal: true, colors: {},
     file: null, fileUrl: null, hasLogo: false, logoSize: '', removeLogo: false, copyFrom: null };
 }
 
@@ -2060,6 +2064,8 @@ function brandingFromToken(t, copyFrom) {
   s.eyebrow = b.eyebrow || '';
   s.title = b.title || '';
   s.height = b.logo_height || BRAND_H_DEFAULT;
+  s.titleSize = b.title_size || BRAND_TSIZE_DEFAULT;
+  s.eyebrowSize = b.eyebrow_size || BRAND_ESIZE_DEFAULT;
   s.useGlobal = !b.colors;
   s.colors = Object.assign({}, b.colors || {});
   if (b.logo) { s.hasLogo = true; s.logoSize = `${b.logo.width} x ${b.logo.height}`; }
@@ -2076,7 +2082,8 @@ function hasBranding(t) {
 function brandingRequestBody(s) {
   const any = s.eyebrow || s.title || s.hasLogo || s.file || !s.useGlobal;
   if (!any) return null;
-  return { eyebrow: s.eyebrow, title: s.title, logo_height: s.height, colors: s.useGlobal ? null : s.colors };
+  return { eyebrow: s.eyebrow, title: s.title, logo_height: s.height,
+    title_size: s.titleSize, eyebrow_size: s.eyebrowSize, colors: s.useGlobal ? null : s.colors };
 }
 
 function updateBrandingSummary() {
@@ -2106,8 +2113,9 @@ function brandingFormHtml(s) {
     const shown = v || brandGlobal[key] || '#808080';
     return `<div class="flex items-center gap-3">
       <input id="br-c-${key}" data-brand-color="${key}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} aria-label="${esc(brandColorLabel(key))}"
-        class="w-12 h-9 p-1 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer${auto ? ' opacity-60' : ''}">
-      <span class="text-sm flex-1 min-w-0 truncate">${esc(brandColorLabel(key))}</span>
+        class="w-12 h-9 p-1 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">
+      <span id="br-l-${key}" class="text-sm flex-1 min-w-0 truncate${auto ? ' opacity-50' : ''}">${esc(brandColorLabel(key))}</span>
+      ${optional ? '' : `<button type="button" data-action="reset-brand-color" data-key="${key}" class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline"><span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}</button>`}
       ${optional ? `<label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer"><input id="br-a-${key}" data-brand-auto="${key}" type="checkbox" class="w-4 h-4 rounded accent-primary"${auto ? ' checked' : ''}> ${esc(tr('settings.auto'))}</label>` : ''}
     </div>`;
   }).join('');
@@ -2125,10 +2133,15 @@ function brandingFormHtml(s) {
         </span>
       </div>
       <div class="flex items-center gap-2">
-        <input id="br-file" type="file" accept="image/png,image/webp" class="text-xs flex-1 min-w-0">
+        {# A browser cannot be told which file a file input already holds, so the
+           input is hidden and the name beside the button is ours: the chosen
+           file, or the logo the link already has. #}
+        <label for="br-file" class="px-3 py-1.5 text-xs rounded-lg border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 cursor-pointer flex-shrink-0 focus-within:ring-2 focus-within:ring-primary/30">${esc(tr('branding.choose_file'))}
+          <input id="br-file" type="file" accept="image/png,image/webp" class="sr-only">
+        </label>
+        <span id="br-file-name" class="text-xs text-muted flex-1 min-w-0 truncate">${esc(logoNote)}</span>
         ${logoShown ? `<button type="button" data-action="remove-brand-logo" class="px-2.5 py-1.5 text-xs rounded-lg border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5">${esc(tr('branding.logo_remove'))}</button>` : ''}
       </div>
-      <p class="text-[11px] text-muted mt-1">${esc(logoNote)}</p>
     </div>
     <div class="${logoShown ? '' : 'hidden'}" id="br-height-row">
       <label for="br-height" class="${lab}">${esc(tr('branding.height'))} <span id="br-height-val" class="normal-case tracking-normal text-muted/70">${s.height} px</span></label>
@@ -2137,17 +2150,25 @@ function brandingFormHtml(s) {
     <div>
       <label for="br-eyebrow" class="${lab}">${esc(tr('branding.eyebrow'))}</label>
       <input id="br-eyebrow" type="text" maxlength="${BRAND_EYEBROW_MAX}" value="${esc(s.eyebrow)}" placeholder="${esc(tr('branding.eyebrow_placeholder'))}" class="${input}">
+      <div class="flex items-center gap-3 mt-2">
+        <label for="br-eyebrow-size" class="text-xs text-muted flex-shrink-0">${esc(tr('branding.size'))} <span id="br-eyebrow-size-val">${s.eyebrowSize} px</span></label>
+        <input id="br-eyebrow-size" type="range" min="${BRAND_ESIZE_MIN}" max="${BRAND_ESIZE_MAX}" step="1" value="${s.eyebrowSize}" class="flex-1 min-w-0 accent-primary">
+      </div>
     </div>
     <div>
       <label for="br-title" class="${lab}">${esc(tr('branding.title'))}</label>
       <input id="br-title" type="text" maxlength="${BRAND_TITLE_MAX}" value="${esc(s.title)}" placeholder="${esc(tr('branding.title_placeholder'))}" class="${input}">
+      <div class="flex items-center gap-3 mt-2">
+        <label for="br-title-size" class="text-xs text-muted flex-shrink-0">${esc(tr('branding.size'))} <span id="br-title-size-val">${s.titleSize} px</span></label>
+        <input id="br-title-size" type="range" min="${BRAND_TSIZE_MIN}" max="${BRAND_TSIZE_MAX}" step="1" value="${s.titleSize}" class="flex-1 min-w-0 accent-primary">
+      </div>
     </div>
     <div class="sticky top-0 z-10 py-2 bg-surface-light dark:bg-surface-dark">
       <div id="br-preview" class="grid grid-cols-2 gap-2"></div>
       <ul id="br-warnings" class="text-[11px] text-primary mt-1.5 space-y-0.5"></ul>
     </div>
     <div>
-      <label class="flex items-center gap-2.5 cursor-pointer">
+      <label class="inline-flex items-center gap-2.5 cursor-pointer">
         <input id="br-global" type="checkbox" class="w-4 h-4 rounded accent-primary"${s.useGlobal ? ' checked' : ''}>
         <span class="text-sm">${esc(tr('branding.use_global'))}</span>
       </label>
@@ -2162,6 +2183,8 @@ function readBrandingForm() {
   s.eyebrow = document.getElementById('br-eyebrow').value.trim();
   s.title = document.getElementById('br-title').value.trim();
   s.height = Number(document.getElementById('br-height').value) || BRAND_H_DEFAULT;
+  s.titleSize = Number(document.getElementById('br-title-size').value) || BRAND_TSIZE_DEFAULT;
+  s.eyebrowSize = Number(document.getElementById('br-eyebrow-size').value) || BRAND_ESIZE_DEFAULT;
   s.useGlobal = document.getElementById('br-global').checked;
   if (!s.useGlobal) {
     for (const [key, optional] of BRAND_COLOR_KEYS) {
@@ -2175,16 +2198,23 @@ function readBrandingForm() {
 function brandPanelHtml(mode, c, s) {
   const [bg, surface, border, text, muted, accent] = ['bg', 'surface', 'border', 'text', 'muted', 'accent'].map(k => safeHex(c[k]));
   const label = tr(mode === 'light' ? 'settings.mode_light' : 'settings.mode_dark');
-  const h = Math.round(s.height * 0.5);
+  const h = Math.round(s.height * 0.6);
+  const hasLogo = s.fileUrl || (s.hasLogo && !s.removeLogo);
+  // The guest page's pinned header: logo, then title over eyebrow. A part that
+  // is not set keeps the page's usual one, shown here as a faded stand-in.
   const logo = s.fileUrl
-    ? `<img src="${esc(s.fileUrl)}" alt="" style="height:${h}px;max-width:50%" class="object-contain flex-shrink-0">`
-    : (s.hasLogo && !s.removeLogo
-      ? `<span aria-hidden="true" class="material-symbols-outlined flex-shrink-0" style="font-size:${h}px;color:${muted}">image</span>` : '');
+    ? `<img src="${esc(s.fileUrl)}" alt="" style="height:${h}px;max-width:45%" class="object-contain flex-shrink-0">`
+    : (hasLogo
+      ? `<span aria-hidden="true" class="material-symbols-outlined flex-shrink-0" style="font-size:${h}px;color:${muted}">image</span>`
+      : `<span aria-hidden="true" class="flex-shrink-0 rounded-full" style="width:24px;height:24px;background:${accent}26"></span>`);
+  const dim = on => on ? '' : ';opacity:.5';
   return `<div class="rounded-xl p-2.5 border" style="background:${bg};border-color:${border};color:${text}">
     <div class="text-[10px] font-mono uppercase tracking-wider mb-1.5" style="color:${muted}">${esc(label)}</div>
     <div class="rounded-lg p-2 border" style="background:${surface};border-color:${border}">
-      <div class="flex items-center gap-2">${logo}<span class="text-[11px] font-medium truncate" style="color:${accent}">${esc(s.eyebrow || (logo ? '' : tr('branding.sample_eyebrow')))}</span></div>
-      <div class="text-sm font-serif mt-1 break-words">${esc(s.title || tr('branding.sample_title'))}</div>
+      <div class="flex items-center gap-2">${logo}<div class="min-w-0">
+        <div class="font-serif leading-tight break-words" style="font-size:${Math.round(s.titleSize * 0.8)}px${dim(s.title)}">${esc(s.title || tr('branding.sample_title'))}</div>
+        <div class="break-words" style="font-size:${Math.round(s.eyebrowSize * 0.8)}px;color:${s.eyebrow ? accent : muted}${dim(s.eyebrow)}">${esc(s.eyebrow || tr('branding.sample_eyebrow'))}</div>
+      </div></div>
     </div>
   </div>`;
 }
@@ -2239,11 +2269,17 @@ const onBrandEvent = e => {
   if (t.id === 'br-file') { if (e.type === 'change') onBrandFile(t); return; }
   if (t.id === 'br-height') {
     document.getElementById('br-height-val').textContent = `${t.value} px`;
+  } else if (t.id === 'br-title-size' || t.id === 'br-eyebrow-size') {
+    document.getElementById(`${t.id}-val`).textContent = `${t.value} px`;
   } else if (t.id === 'br-global') {
     document.getElementById('br-colors').classList.toggle('hidden', t.checked);
   } else if (t.dataset && t.dataset.brandAuto) {
     const el = document.getElementById(`br-c-${t.dataset.brandAuto}`);
-    if (el) { el.disabled = t.checked; el.classList.toggle('opacity-60', t.checked); }
+    if (el) el.disabled = t.checked;
+    // The label greys out, not the swatch: the swatch keeps showing the colour
+    // that Auto works out.
+    const lab = document.getElementById(`br-l-${t.dataset.brandAuto}`);
+    if (lab) lab.classList.toggle('opacity-50', t.checked);
   }
   scheduleBrandPreview(t.type === 'text' || t.type === 'color' || t.type === 'range' ? 150 : 0);
 };
@@ -2257,10 +2293,42 @@ function drawBrandingForm() {
 
 function openBrandingDialog(ctx, label) {
   brandCtx = ctx;
+  brandGlobal = {};
+  loadBrandGlobal();
   document.getElementById('branding-token-label').textContent = label || '';
   document.getElementById('branding-error').textContent = '';
   drawBrandingForm();
   openModal('branding-modal');
+}
+
+// Primary and Background have no Auto, so each has a Revert instead. In a
+// link's dialog it goes back to the global colour; in Settings, to HomePass's
+// built-in colour (the same as the defaults in app/config.py, which a test
+// checks). Both only move the picker: nothing is saved until Save.
+// The global colours come from their own preview call: while a link has colours
+// of its own, the dialog's sample is drawn from those, not from the global ones.
+async function loadBrandGlobal() {
+  try {
+    const r = await fetch(`${BASE}/admin/settings/theme-preview`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}',
+    });
+    if (r.ok) brandGlobal = Object.assign({}, (await r.json()).resolved || {});
+  } catch (_) { /* Revert then has nothing to go back to, and does nothing */ }
+}
+
+async function resetBrandColor(key) {
+  if (!HEX_RE.test(brandGlobal[key] || '')) await loadBrandGlobal();
+  const el = document.getElementById(`br-c-${key}`);
+  if (el && HEX_RE.test(brandGlobal[key] || '')) el.value = brandGlobal[key].toLowerCase();
+  scheduleBrandPreview(0);
+}
+
+const BUILT_IN_COLORS = { brand_primary: '#D9523C', brand_bg: '#F2F0E9' };
+
+function resetSettingColor(key) {
+  const el = document.getElementById(`set-${key}`);
+  if (el && BUILT_IN_COLORS[key]) el.value = BUILT_IN_COLORS[key].toLowerCase();
+  scheduleThemePreview(0);
 }
 
 function openBrandingCreate() {
@@ -2301,6 +2369,7 @@ function onBrandFile(input) {
   // Redrawing would drop the chosen file from the input, so the logo bits are
   // updated in place and the server has the final say on size and format.
   readBrandingForm();
+  document.getElementById('br-file-name').textContent = f.name;
   document.getElementById('br-height-row').classList.remove('hidden');
   scheduleBrandPreview(0);
 }
@@ -2337,20 +2406,27 @@ async function submitBranding() {
     closeBrandingModal();
     return;
   }
-  const r = await fetch(`${BASE}/admin/tokens/${brandCtx.tokenId}/branding`, {
+  const tokenId = brandCtx.tokenId;
+  // Open guest pages are told to reload by the last call of a save, never an
+  // earlier one: a page that reloads between two calls shows a half-saved link
+  // and has nothing left to tell it otherwise. With a logo change the text and
+  // colours go first, quietly, and the logo call sends the notice. Without
+  // one, the text call sends it.
+  const logoOp = s.file ? 'upload' : (s.removeLogo && s.hasLogo ? 'remove' : '');
+  const r = await fetch(`${BASE}/admin/tokens/${tokenId}/branding${logoOp ? '?notify=false' : ''}`, {
     method: 'PATCH', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ eyebrow: s.eyebrow, title: s.title, logo_height: s.height, colors: s.useGlobal ? null : s.colors }),
+    body: JSON.stringify({ eyebrow: s.eyebrow, title: s.title, logo_height: s.height,
+      title_size: s.titleSize, eyebrow_size: s.eyebrowSize, colors: s.useGlobal ? null : s.colors }),
   });
   if (!r.ok) {
     const e = await r.json().catch(() => ({}));
     err.textContent = typeof e.detail === 'string' ? e.detail : tr('branding.err_save');
     return;
   }
-  const tokenId = brandCtx.tokenId;
-  if (s.file) {
+  if (logoOp === 'upload') {
     const msg = await uploadBrandingLogo(tokenId, s.file);
     if (msg) { err.textContent = msg; loadTokens(); return; }
-  } else if (s.removeLogo && s.hasLogo) {
+  } else if (logoOp === 'remove') {
     await fetch(`${BASE}/admin/tokens/${tokenId}/logo`, { method: 'DELETE' });
   }
   closeBrandingModal();
@@ -2856,7 +2932,7 @@ function settingsInputHtml(f, entry) {
     const auto = !!f.optional && value === '';
     const shown = auto ? '#808080' : value;
     return `<div class="flex items-center gap-3">
-      <input id="${id}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer${auto ? ' opacity-60' : ''}">
+      <input id="${id}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">
       ${f.optional ? `<label class="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
         <input id="${id}-auto" type="checkbox" data-auto-for="${esc(f.key)}" class="w-4 h-4 rounded accent-primary"${auto ? ' checked' : ''}>
         ${esc(tr('settings.auto'))}
@@ -2873,8 +2949,11 @@ function settingRowHtml(f, entry) {
   const option = entry.option === '' || entry.option == null ? tr('settings.empty') : String(entry.option);
   return `<div>
     <div class="flex items-center justify-between gap-2 mb-1.5">
-      <label for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted">${esc(f.label)}</label>
-      ${entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
+      <label id="set-${f.key}-label" for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted${f.type === 'color' && f.optional && (entry.value == null || entry.value === '') ? ' opacity-50' : ''}">${esc(f.label)}</label>
+      ${f.type === 'color' && !f.optional ? `<button type="button" data-action="reset-color" data-key="${esc(f.key)}"
+        class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
+        <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
+      </button>` : entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
         class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
         <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
       </button>` : ''}
@@ -3020,7 +3099,9 @@ function bindSettingsListeners() {
     const t = e.target;
     if (t.dataset && t.dataset.autoFor) {
       const el = document.getElementById(`set-${t.dataset.autoFor}`);
-      if (el) { el.disabled = t.checked; el.classList.toggle('opacity-60', t.checked); }
+      if (el) el.disabled = t.checked;
+      const lab = document.getElementById(`set-${t.dataset.autoFor}-label`);
+      if (lab) lab.classList.toggle('opacity-50', t.checked);
       scheduleThemePreview(0);
     } else if (t.type === 'color') {
       scheduleThemePreview();
@@ -3454,6 +3535,8 @@ document.addEventListener('click', e => {
     case 'open-settings-modal': openSettingsModal(); break;
     case 'submit-settings': submitSettings(); break;
     case 'revert-setting': revertSetting(el.dataset.key); break;
+    case 'reset-color': resetSettingColor(el.dataset.key); break;
+    case 'reset-brand-color': resetBrandColor(el.dataset.key); break;
   }
 });
 

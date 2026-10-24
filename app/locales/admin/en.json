@@ -428,14 +428,16 @@
   "branding.logo_remove": "Remove",
   "branding.height": "Logo height",
   "branding.eyebrow": "Eyebrow",
-  "branding.eyebrow_placeholder": "Shown beside the logo, as typed",
+  "branding.eyebrow_placeholder": "Replaces the app name, shown as typed",
   "branding.title": "Title",
-  "branding.title_placeholder": "Large heading under it",
+  "branding.title_placeholder": "Replaces the link's label",
   "branding.use_global": "Use global colours",
   "branding.sample_eyebrow": "Eyebrow",
   "branding.sample_title": "Title",
   "branding.err_size": "The logo must be 512 KB or smaller.",
   "branding.err_upload": "The logo could not be uploaded.",
   "branding.err_save": "Branding could not be saved.",
-  "branding.saved": "Branding saved"
+  "branding.saved": "Branding saved",
+  "branding.choose_file": "Choose file",
+  "branding.size": "Size"
 }

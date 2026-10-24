@@ -292,6 +292,14 @@ class BrandingInput(BaseModel):
         default=branding.LOGO_HEIGHT_DEFAULT,
         ge=branding.LOGO_HEIGHT_MIN, le=branding.LOGO_HEIGHT_MAX, strict=True,
     )
+    title_size: int = Field(
+        default=branding.TITLE_SIZE_DEFAULT,
+        ge=branding.TITLE_SIZE_MIN, le=branding.TITLE_SIZE_MAX, strict=True,
+    )
+    eyebrow_size: int = Field(
+        default=branding.EYEBROW_SIZE_DEFAULT,
+        ge=branding.EYEBROW_SIZE_MIN, le=branding.EYEBROW_SIZE_MAX, strict=True,
+    )
     colors: dict[str, str] | None = None
 
     _clean_text = field_validator("eyebrow", "title", mode="before")(branding.clean_line)
@@ -312,6 +320,14 @@ class TokenBrandingRequest(BaseModel):
     logo_height: int | None = Field(
         default=None,
         ge=branding.LOGO_HEIGHT_MIN, le=branding.LOGO_HEIGHT_MAX, strict=True,
+    )
+    title_size: int | None = Field(
+        default=None,
+        ge=branding.TITLE_SIZE_MIN, le=branding.TITLE_SIZE_MAX, strict=True,
+    )
+    eyebrow_size: int | None = Field(
+        default=None,
+        ge=branding.EYEBROW_SIZE_MIN, le=branding.EYEBROW_SIZE_MAX, strict=True,
     )
     colors: dict[str, str] | None = None
 
@@ -683,6 +699,8 @@ class ApiBranding(BaseModel):
     eyebrow: str = ""
     title: str = ""
     logo_height: int = branding.LOGO_HEIGHT_DEFAULT
+    title_size: int = branding.TITLE_SIZE_DEFAULT
+    eyebrow_size: int = branding.EYEBROW_SIZE_DEFAULT
     colors: dict[str, str] | None = None
     logo: ApiBrandingLogo | None = None
 

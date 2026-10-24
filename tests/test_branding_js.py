@@ -18,7 +18,10 @@ async def test_request_body_is_null_when_nothing_is_set(client, admin_session, m
     console.log(JSON.stringify({ empty, eyebrow: brandingRequestBody(s), own: brandingRequestBody(own) }));
     """)
     assert out["empty"] is None
-    assert out["eyebrow"] == {"eyebrow": "Be-Nith", "title": "", "logo_height": 60, "colors": None}
+    assert out["eyebrow"] == {
+        "eyebrow": "Be-Nith", "title": "", "logo_height": 60,
+        "title_size": 16, "eyebrow_size": 12, "colors": None,
+    }
     assert out["own"]["colors"]["brand_primary"] == "#112233"
 
 
@@ -57,11 +60,33 @@ async def test_saving_a_link_patches_then_uploads_or_removes(client, admin_sessi
     console.log(JSON.stringify(calls));
     """)
     patch, delete, patch2, upload = out
-    assert patch["method"] == "PATCH" and patch["url"].endswith("/admin/tokens/tok1/branding")
-    assert patch["body"] == {"eyebrow": "Be-Nith", "title": "Welcome", "logo_height": 60, "colors": None}
+    # The text goes first and quietly when a logo call follows; the logo call is
+    # the one that tells open guest pages to reload.
+    assert patch["method"] == "PATCH" and patch["url"].endswith("/admin/tokens/tok1/branding?notify=false")
+    assert patch["body"] == {
+        "eyebrow": "Be-Nith", "title": "Welcome", "logo_height": 60,
+        "title_size": 16, "eyebrow_size": 12, "colors": None,
+    }
     assert delete["method"] == "DELETE" and delete["url"].endswith("/admin/tokens/tok1/logo")
-    assert patch2["method"] == "PATCH"
+    assert patch2["method"] == "PATCH" and patch2["url"].endswith("/admin/tokens/tok2/branding?notify=false")
     assert upload["method"] == "POST" and upload["url"].endswith("/admin/tokens/tok2/logo") and upload["body"] == "form"
+
+
+async def test_text_only_save_notifies_from_the_patch(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    const calls = [];
+    globalThis.fetch = async (url, opts = {}) => {
+      const method = opts.method || 'GET';
+      if (method !== 'GET') calls.push(url);
+      return { ok: true, json: async () => (method === 'GET' ? [] : {}) };
+    };
+    const el = id => document.getElementById(id);
+    el('br-eyebrow').value = 'Hi'; el('br-title').value = ''; el('br-height').value = '40'; el('br-global').checked = true;
+    brandCtx = { mode: 'edit', tokenId: 'tok3', state: emptyBranding() };
+    await submitBranding();
+    console.log(JSON.stringify(calls));
+    """)
+    assert len(out) == 1 and out[0].endswith("/admin/tokens/tok3/branding")
 
 
 async def test_a_refused_logo_keeps_the_dialog_open_with_the_reason(client, admin_session, mock_ha_client):
@@ -91,3 +116,81 @@ async def test_create_mode_stages_without_calling_the_server(client, admin_sessi
     console.log(JSON.stringify({ called, eyebrow: createBranding.eyebrow }));
     """)
     assert out == {"called": False, "eyebrow": "Hi"}
+
+
+async def test_revert_on_primary_and_background(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    const el = id => document.getElementById(id);
+    // A link's dialog goes back to the global colour.
+    brandGlobal = { brand_primary: '#D9523C', brand_bg: '#F2F0E9' };
+    el('br-c-brand_primary').value = '#000000';
+    await resetBrandColor('brand_primary');
+    // Settings goes back to the built-in colour, whatever the add-on option is.
+    settingsState.brand_bg = { value: '#101010', option: '#112233', overridden: true };
+    el('set-brand_bg').value = '#101010';
+    resetSettingColor('brand_bg');
+    console.log(JSON.stringify({ link: el('br-c-brand_primary').value, setting: el('set-brand_bg').value }));
+    """)
+    assert out == {"link": "#d9523c", "setting": "#f2f0e9"}
+
+
+async def test_required_colour_rows_offer_revert_and_auto_greys_the_label(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    const f = SETTINGS_FIELDS.find(x => x.key === 'brand_primary');
+    const g = SETTINGS_FIELDS.find(x => x.key === 'brand_secondary');
+    const primary = settingRowHtml(f, { value: '#D9523C', option: '#D9523C', overridden: false });
+    const secondary = settingRowHtml(g, { value: '', option: '', overridden: false });
+    const form = brandingFormHtml(emptyBranding());
+    console.log(JSON.stringify({
+      primaryRevert: primary.includes('data-action="reset-color"'),
+      secondaryRevert: secondary.includes('data-action="reset-color"'),
+      labelGreyed: /id="set-brand_secondary-label"[^>]*opacity-50/.test(secondary),
+      swatchGreyed: /type="color"[^>]*opacity-60/.test(secondary),
+      linkRevert: form.includes('data-action="reset-brand-color" data-key="brand_primary"'),
+      linkAutoLabel: /id="br-l-brand_secondary"[^>]*opacity-50/.test(form),
+    }));
+    """)
+    assert out == {
+        "primaryRevert": True, "secondaryRevert": False, "labelGreyed": True,
+        "swatchGreyed": False, "linkRevert": True, "linkAutoLabel": True,
+    }
+
+
+async def test_built_in_colours_match_the_defaults(client, admin_session, mock_ha_client):
+    from app.config import Settings
+    out = await _run(client, admin_session, "console.log(JSON.stringify(BUILT_IN_COLORS));")
+    assert out == {
+        "brand_primary": Settings.model_fields["brand_primary"].default,
+        "brand_bg": Settings.model_fields["brand_bg"].default,
+    }
+
+
+async def test_text_size_sliders_are_read_and_sent(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    const el = id => document.getElementById(id);
+    el('br-eyebrow').value = 'E'; el('br-title').value = 'T'; el('br-height').value = '40';
+    el('br-title-size').value = '24'; el('br-eyebrow-size').value = '15'; el('br-global').checked = true;
+    brandCtx = { mode: 'edit', tokenId: 't', state: emptyBranding() };
+    const s = readBrandingForm();
+    const fromToken = brandingFromToken({ branding: { title_size: 20, eyebrow_size: 11 } }, null);
+    console.log(JSON.stringify({ body: brandingRequestBody(s), titleSize: fromToken.titleSize, eyebrowSize: fromToken.eyebrowSize,
+      form: brandingFormHtml(fromToken).includes('id="br-title-size" type="range" min="14" max="28"') }));
+    """)
+    assert out["body"]["title_size"] == 24 and out["body"]["eyebrow_size"] == 15
+    assert (out["titleSize"], out["eyebrowSize"], out["form"]) == (20, 11, True)
+
+
+async def test_link_revert_works_when_the_link_has_its_own_colours(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    // A link with colours of its own: nothing has asked for the global ones yet.
+    brandGlobal = {};
+    globalThis.fetch = async (url, opts = {}) => ({
+      ok: true,
+      json: async () => ({ resolved: { brand_primary: '#D9523C', brand_bg: '#F2F0E9' } }),
+    });
+    const el = id => document.getElementById(id);
+    el('br-c-brand_bg').value = '#000000';
+    await resetBrandColor('brand_bg');
+    console.log(JSON.stringify({ bg: el('br-c-brand_bg').value }));
+    """)
+    assert out == {"bg": "#f2f0e9"}

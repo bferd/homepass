@@ -501,7 +501,7 @@ async def _set_branding_if_changed(row: Any, change: TokenBrandingRequest | None
     sent = change.model_fields_set
     current = branding.from_row(row["branding"])
     updated = dict(current)
-    for key in ("eyebrow", "title", "logo_height"):
+    for key in ("eyebrow", "title", "logo_height", "title_size", "eyebrow_size"):
         if key in sent and getattr(change, key) is not None:
             updated[key] = getattr(change, key)
     if "colors" in sent:
@@ -516,6 +516,7 @@ async def _set_branding_if_changed(row: Any, change: TokenBrandingRequest | None
 async def update_token_branding(
     token_id: str,
     body: TokenBrandingRequest,
+    notify: bool = Query(default=True),
     _: str = Depends(require_admin),
 ) -> dict:
     """Change a link's eyebrow, title, logo size or colours. A field left out
@@ -523,7 +524,9 @@ async def update_token_branding(
     colours. The logo file has its own endpoints.
 
     A revoked token is refused, as the info edit is. Open guest tabs are told
-    to reload so they show the change now.
+    to reload so they show the change now, unless ``notify=false``: a save made
+    of several calls (the dashboard's, with a logo) sends the notice on the last
+    one, so a page never reloads to a half-saved link.
     """
     row = await db.get_token_by_id(token_id)
     if not row:
@@ -534,7 +537,8 @@ async def update_token_branding(
             detail="Cannot edit the branding of a revoked token",
         )
     if await _set_branding_if_changed(row, body):
-        await ha_client.broadcast_schedule_changed(token_id)
+        if notify:
+            await ha_client.broadcast_schedule_changed(token_id)
         row = await db.get_token_by_id(token_id)
     return _row_to_response(row)
 
@@ -549,6 +553,7 @@ async def upload_token_logo(
     token_id: str,
     request: Request,
     file: UploadFile = File(...),
+    notify: bool = Query(default=True),
     _: str = Depends(require_admin),
 ) -> dict:
     """Upload or replace a link's logo: a PNG or WebP, checked from its bytes.
@@ -582,12 +587,17 @@ async def upload_token_logo(
         raise HTTPException(status_code=code, detail=str(exc))
     if not await db.set_token_logo(token_id, content_type, data, width, height):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    await ha_client.broadcast_schedule_changed(token_id)
+    if notify:
+        await ha_client.broadcast_schedule_changed(token_id)
     return _row_to_response(await db.get_token_by_id(token_id))
 
 
 @router.delete("/tokens/{token_id}/logo")
-async def delete_token_logo(token_id: str, _: str = Depends(require_admin)) -> dict:
+async def delete_token_logo(
+    token_id: str,
+    notify: bool = Query(default=True),
+    _: str = Depends(require_admin),
+) -> dict:
     """Remove a link's logo. Removing one that is not there is not an error."""
     row = await db.get_token_by_id(token_id)
     if not row:
@@ -597,7 +607,7 @@ async def delete_token_logo(token_id: str, _: str = Depends(require_admin)) -> d
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit the branding of a revoked token",
         )
-    if await db.delete_token_logo(token_id):
+    if await db.delete_token_logo(token_id) and notify:
         await ha_client.broadcast_schedule_changed(token_id)
     return _row_to_response(await db.get_token_by_id(token_id))
 
