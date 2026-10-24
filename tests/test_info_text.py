@@ -74,7 +74,7 @@ def _columns(db_file) -> list[str]:
 
 
 def test_head_is_015():
-    assert ScriptDirectory.from_config(Config("alembic.ini")).get_current_head() == "015"
+    assert ScriptDirectory.from_config(Config("alembic.ini")).get_current_head() == "016"
 
 
 def test_upgrade_gives_existing_tokens_no_info_text(tmp_path, monkeypatch):

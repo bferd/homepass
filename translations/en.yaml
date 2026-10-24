@@ -17,6 +17,27 @@ configuration:
   brand_primary:
     name: Primary Color
     description: "Hex color for accents and buttons (e.g., #D9523C)"
+  brand_secondary:
+    name: Secondary Color
+    description: "Optional hex color for secondary highlights such as info buttons. Blank picks one that goes with the primary."
+  brand_accent:
+    name: Accent Color
+    description: "Optional hex color for small accents and links. Blank picks one that goes with the primary."
+  brand_surface:
+    name: Card Color
+    description: "Optional hex color for cards in light mode. Blank is worked out from the background."
+  brand_text:
+    name: Text Color
+    description: "Optional hex color for text in light mode. Blank is worked out from the background."
+  brand_dark_bg:
+    name: Dark Background Color
+    description: "Optional hex color for the page background in dark mode. Blank is worked out from the background."
+  brand_dark_surface:
+    name: Dark Card Color
+    description: "Optional hex color for cards in dark mode. Blank is worked out from the dark background."
+  brand_dark_text:
+    name: Dark Text Color
+    description: "Optional hex color for text in dark mode. Blank is worked out from the dark background."
   guest_url:
     name: Guest URL
     description: "External base URL for guest links (e.g., https://guest.myhouse.com). Leave empty for local network."

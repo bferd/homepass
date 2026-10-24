@@ -36,7 +36,11 @@ Set these options in the add-on Configuration tab:
 | **App Name** | Display name shown to guests (default: "Home Access") |
 | **Contact Message** | Message shown when a guest link expires |
 | **Background Color** | Hex color for page background (e.g., `#F2F0E9`) |
-| **Primary Color** | Hex color for accents and buttons (e.g., `#D9523C`) |
+| **Primary Color** | Hex color for buttons and highlights (e.g., `#D9523C`) |
+| **Secondary Color** | Optional hex color for info buttons and secondary highlights. Blank picks one that goes with the primary. |
+| **Accent Color** | Optional hex color for small details and links. Blank picks one that goes with the primary. |
+| **Card Color**, **Text Color** | Optional hex colors for cards and text in light mode. Blank is worked out from the background. |
+| **Dark Background Color**, **Dark Card Color**, **Dark Text Color** | Optional hex colors for dark mode. Blank is worked out: the dark background from the light one, then the card and text from the dark background. |
 | **Guest URL** | External base URL for guest links (e.g., `https://guest.myhouse.com` or `https://guest.myhouse.com/visitors`). Leave empty for local network. For a path prefix, the reverse proxy must preserve the public `Host` and strip the prefix before forwarding to HomePass. |
 | **Time Zone** | IANA time zone weekly access windows are evaluated in (e.g., `Europe/Madrid`). Leave empty to use Home Assistant's own time zone, which is right for almost every install. |
 | **Home Network Ranges** | Comma-separated CIDRs that count as your home network (e.g., `192.168.1.0/24`). Controls marked **Only from the home network** accept commands only from these. Leave empty to turn that off. |
@@ -48,7 +52,7 @@ These are the only add-on options. Everything else is set per link, in the dashb
 
 ### Changing settings from the dashboard
 
-The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, both colours and how many days of activity to keep. Changes apply straight away, with no restart.
+The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, the colours and how many days of activity to keep. The colours section draws a light and a dark sample as you change them, shows what each blank colour currently works out to, and warns when text would be hard to read. Tick **Auto** on an optional colour to go back to the worked-out one. Changes apply straight away, with no restart.
 
 Two settings are only in the dashboard, not in the add-on options:
 
@@ -244,6 +248,18 @@ In the [Public API](#public-api), `group_headings` is accepted on create and `PA
 {"light": {"name": "Lamps", "locked": false}, "switch": {"name": "", "locked": true}}
 ```
 
+## Link branding
+
+Each link can carry its own header: a logo, a small line of text beside it (the eyebrow) and a large title. All three are optional, and a link with none shows the usual page. Set them in the create form or with the **Branding** button on a link's card.
+
+- **Logo** is a PNG or WebP, not animated, 32 to 1024 px on each side and up to 512 KB. Any shape works, and one logo serves light and dark mode. The slider sets its height from 24 to 96 px; a wide logo is held to half the page width.
+- **Eyebrow** (40 characters) is shown as typed. **Title** is 80.
+- **Use global colours** is on by default. Turn it off to give the link its own Primary and Background plus the optional colours from **Settings**, with a light and dark sample as you edit.
+
+The header also appears on the PIN, expired and revoked pages, and the installed app takes the link's title and colours. The device-lock pages and the screens shown to a blocked address stay plain, so a shared link preview reveals nothing. **Duplicate** copies the branding and logo.
+
+In the [Public API](#public-api), token responses and `PATCH /api/v1/tokens/{id}` carry `branding` (`eyebrow`, `title`, `logo_height`, `colors`, and `logo` size details). Logos are uploaded from the dashboard only.
+
 ## Public API
 
 An optional REST API lets Home Assistant automations, Node-RED or any HTTP client manage tokens without the dashboard. It is off until you turn on **Enable API** and set an **API Token** of at least 32 characters (`openssl rand -hex 32` makes a good one), then restart the add-on.
@@ -255,7 +271,7 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `GET` | `/api/v1/tokens` | List tokens |
 | `POST` | `/api/v1/tokens` | Create a token |
 | `GET` | `/api/v1/tokens/{id}` | One token, with entities and per-entity options |
-| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter, the guest info text or the section headings |
+| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter, the guest info text, the section headings or the branding text and colours |
 | `PUT` | `/api/v1/tokens/{id}/schedule` | Replace start, end, weekly times and use limit |
 | `POST` | `/api/v1/tokens/{id}/unbind` | Release a device lock's claim |
 | `GET` / `POST` | `/api/v1/tokens/{id}/access-codes` | List or make links without PIN (a new code is shown once) |
@@ -265,7 +281,7 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `POST` | `/api/v1/tokens/{id}/renew` | New expiry, and un-revoke |
 | `POST` | `/api/v1/tokens/{id}/activate` | Start a scheduled token now |
 | `POST` | `/api/v1/tokens/{id}/rotate-slug` | New link, old one stops working |
-| `POST` | `/api/v1/tokens/{id}/duplicate` | Copy entities, options, allowlists, weekly times, use limit, remember-PIN and device-lock settings, guest info text and section headings into a new token |
+| `POST` | `/api/v1/tokens/{id}/duplicate` | Copy entities, options, allowlists, weekly times, use limit, remember-PIN and device-lock settings, guest info text, section headings and branding (logo included) into a new token |
 
 Anything that sets an expiry takes either `expires_at` (Unix seconds — handy for a check-out time) or `expires_in_seconds`, not both. Creating a token runs the same checks as the dashboard and accepts every field the dashboard sets — weekly times, use limit, remember-PIN, device lock and country allowlist included. Responses never include a PIN, only `has_pin`.
 

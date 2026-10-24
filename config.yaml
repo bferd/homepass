@@ -37,6 +37,13 @@ schema:
   contact_message: str
   brand_bg: str
   brand_primary: str
+  brand_secondary: "str?"
+  brand_accent: "str?"
+  brand_surface: "str?"
+  brand_text: "str?"
+  brand_dark_bg: "str?"
+  brand_dark_surface: "str?"
+  brand_dark_text: "str?"
   guest_url: "str?"
   timezone: "str?"
   local_network_cidrs: "str?"

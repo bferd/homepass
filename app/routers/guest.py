@@ -26,6 +26,7 @@ from fastapi.responses import (
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
 
+from app import branding
 from app import database as db
 from app import device_binding
 from app import geoip
@@ -444,11 +445,29 @@ def _set_pin_session(
     )
 
 
-def _pin_page(request: Request, slug: str, error_key: str | None = None, status_code: int = 200):
+def _link_branding(request: Request, row, slug: str) -> dict:
+    """The link's own palette and header, merged over base_context.
+
+    Used on the pages a guest sees once the link is known to exist and the
+    visitor passed the IP and country gates: the page itself, the PIN screen
+    and the expired or revoked screen. Not on the device claim and refused
+    screens, which name nothing on purpose (see device_claim.html), and not on
+    a screen shown to a blocked address or an unknown slug, which must look the
+    same for every link.
+    """
+    return branding.page_context(row, request.state.base_path, slug)
+
+
+def _pin_page(
+    request: Request, slug: str, error_key: str | None = None, status_code: int = 200,
+    row=None,
+):
     """The PIN screen, optionally with an error — named by its catalogue key,
     so it is rendered in the guest's language like the rest of the page."""
     ctx = base_context(request, i18n.GUEST)
     ctx.update({"slug": slug, "contact_message": settings.contact_message})
+    if row is not None:
+        ctx.update(_link_branding(request, row, slug))
     if error_key:
         ctx["error_key"] = error_key
     return templates.TemplateResponse(request, "pin_entry.html", ctx, status_code=status_code)
@@ -492,6 +511,7 @@ async def _redeem_access_code(request: Request, row, slug: str, code: str):
             request, slug,
             error_key="page.pin.error_rate_limited",
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            row=row,
         )
 
     code_id = guest_pin.match_access_code(code, await db.get_access_code_hashes(row["id"]))
@@ -503,6 +523,7 @@ async def _redeem_access_code(request: Request, row, slug: str, code: str):
             request, slug,
             error_key="page.pin.error_link_retired",
             status_code=status.HTTP_401_UNAUTHORIZED,
+            row=row,
         )
 
     await db.touch_access_code(code_id)
@@ -939,6 +960,10 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
             "contact_message": settings.contact_message,
             "reason": "used" if row and not row["revoked"] and _is_used_up(row) else "expired",
         })
+        if row:
+            # An expired or revoked link keeps its branding; a slug that never
+            # existed gets the plain page.
+            ctx.update(_link_branding(request, row, slug))
         return templates.TemplateResponse(request, "expired.html", ctx, status_code=410)
 
     try:
@@ -960,7 +985,7 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
     # logged yet — an unanswered prompt is not an access, the same way a request
     # blocked by the IP allowlist above is not.
     if not await _pin_gate_ok(row, request):
-        return _pin_page(request, slug)
+        return _pin_page(request, slug, row=row)
 
     # Device binding. Loading this page never claims anything, because this GET
     # is exactly the request a chat app makes to build its link preview:
@@ -1067,6 +1092,7 @@ async def guest_pwa(background_tasks: BackgroundTasks, request: Request, slug: s
             db.group_headings_from_row(row["group_headings"]) if pending else {}
         ),
         **await _info_context(row, pending),
+        **_link_branding(request, row, slug),
     })
     response = templates.TemplateResponse(request, "guest_pwa.html", ctx)
     if row["device_binding"]:
@@ -1112,6 +1138,8 @@ async def guest_bind(request: Request, slug: str = Path(max_length=64)):
     if not row or _is_dead(row):
         ctx = base_context(request, i18n.GUEST)
         ctx.update({"slug": slug, "contact_message": settings.contact_message})
+        if row:
+            ctx.update(_link_branding(request, row, slug))
         return templates.TemplateResponse(request, "expired.html", ctx, status_code=410)
 
     try:
@@ -1179,6 +1207,8 @@ async def guest_pin_submit(
     if not row or _is_dead(row):
         ctx = base_context(request, i18n.GUEST)
         ctx.update({"slug": slug, "contact_message": settings.contact_message})
+        if row:
+            ctx.update(_link_branding(request, row, slug))
         return templates.TemplateResponse(request, "expired.html", ctx, status_code=410)
 
     try:
@@ -1213,6 +1243,7 @@ async def guest_pin_submit(
             "contact_message": settings.contact_message,
             "error_key": "page.pin.error_rate_limited",
         })
+        ctx.update(_link_branding(request, row, slug))
         return templates.TemplateResponse(
             request, "pin_entry.html", ctx,
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -1225,6 +1256,7 @@ async def guest_pin_submit(
             "contact_message": settings.contact_message,
             "error_key": "page.pin.error_incorrect",
         })
+        ctx.update(_link_branding(request, row, slug))
         return templates.TemplateResponse(
             request, "pin_entry.html", ctx,
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1242,6 +1274,64 @@ async def guest_pin_submit(
 # Dynamic PWA manifest
 # ---------------------------------------------------------------------------
 
+async def _manifest_identity(request: Request, slug: str) -> tuple[str, str, str]:
+    """The installed app's name and colours: the link's own if it has any.
+
+    Only for a link that is live and that this visitor may open. A dead link, an
+    unknown slug and a blocked address all get the global manifest, so this
+    answer cannot be used to tell them apart or to read a link's title.
+    """
+    name, bg, primary = settings.app_name, settings.brand_bg, settings.brand_primary
+    row = await db.get_token_by_slug(slug)
+    if not row or _is_dead(row):
+        return name, bg, primary
+    try:
+        _enforce_ip_allowlist(row, request)
+        await _enforce_country_allowlist(row, request)
+    except HTTPException:
+        return name, bg, primary
+    b = branding.from_row(row["branding"])
+    if b["title"]:
+        name = b["title"]
+    if b["colors"] is not None:
+        bg, primary = b["colors"]["brand_bg"], b["colors"]["brand_primary"]
+    return name, bg, primary
+
+
+@router.get("/{slug}/logo")
+async def guest_logo(request: Request, slug: str = Path(max_length=64)):
+    """A link's logo image, for its own pages.
+
+    Open on a PIN-locked, expired or revoked link, because those screens show
+    it. The IP and country gates still apply, like the page's own, and an
+    unknown slug or a link with no logo is a plain 404. The URL carries ?v=<hash>
+    so a replaced logo is fetched fresh while an unchanged one is cached.
+    """
+    row = await db.get_token_by_slug(slug)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    try:
+        _enforce_ip_allowlist(row, request)
+        await _enforce_country_allowlist(row, request)
+    except HTTPException:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    logo = await db.get_token_logo(row["id"])
+    if logo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return Response(
+        content=bytes(logo["data"]),
+        media_type=logo["content_type"],
+        headers={
+            # The bytes were checked as PNG or WebP at upload; this keeps a
+            # browser from reading them as anything else, and from running
+            # them if it ever did.
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Cache-Control": "private, max-age=31536000, immutable",
+        },
+    )
+
+
 @router.get("/{slug}/manifest.json")
 async def guest_manifest(request: Request, slug: str = Path(max_length=64)):
     bp = request.state.base_path
@@ -1249,9 +1339,10 @@ async def guest_manifest(request: Request, slug: str = Path(max_length=64)):
     # re-reads the manifest and its icons rarely, so an unversioned icon URL is
     # the longest-lived stale asset of the lot.
     v = BUILD_VERSION
+    name, bg, primary = await _manifest_identity(request, slug)
     manifest = {  # colors must match static/input.css
-        "name": settings.app_name,
-        "short_name": settings.app_name[:12],
+        "name": name,
+        "short_name": name[:12],
         # In the language of the browser installing the app, like its pages.
         "description": i18n.translator(i18n.GUEST, i18n.guest_language(request))(
             "page.manifest_description"
@@ -1259,8 +1350,8 @@ async def guest_manifest(request: Request, slug: str = Path(max_length=64)):
         "start_url": f"{bp}/g/{slug}",
         "scope": f"{bp}/g/{slug}",
         "display": "standalone",
-        "background_color": settings.brand_bg,
-        "theme_color": settings.brand_primary,
+        "background_color": bg,
+        "theme_color": primary,
         "orientation": "portrait",
         "icons": [
             {"src": f"{bp}/static/icons/icon-192.png?v={v}", "sizes": "192x192",

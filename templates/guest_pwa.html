@@ -175,7 +175,7 @@
 </style>
 {% endblock %}
 
-{% block body_attrs %}class="bg-bg-light dark:bg-bg-dark text-soot dark:text-gray-100 font-sans antialiased min-h-dvh"
+{% block body_attrs %}class="bg-bg-light dark:bg-bg-dark text-fg-light dark:text-fg-dark font-sans antialiased min-h-dvh"
   data-theme-offset="2"
   style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"{% endblock %}
 
@@ -226,6 +226,12 @@
     </div>
   </div>
 </header>
+
+{% if branding %}
+<section aria-label="{{ branding.title or branding.eyebrow or app_name }}" class="max-w-xl mx-auto px-4 pt-6">
+  {% include "_brand_header.html" %}
+</section>
+{% endif %}
 
 {# The global welcome text and, unless it is flagged for the footer, this
    link's info text. Built and sanitised by app/richtext.py; the server leaves it
@@ -436,7 +442,7 @@ applyStoredInfoState();
     </div>
     <div class="flex gap-3">
       <button data-action="close-sheet" id="sheet-cancel" class="flex-1 py-3.5 rounded-xl bg-soot/5 dark:bg-white/5 text-sm font-display font-semibold">{{ t('sheet.cancel') }}</button>
-      <button id="sheet-ok" class="flex-1 py-3.5 rounded-xl bg-primary text-white text-sm font-display font-semibold">{{ t('page.sheet.confirm') }}</button>
+      <button id="sheet-ok" class="flex-1 py-3.5 rounded-xl bg-primary text-on-primary text-sm font-display font-semibold">{{ t('page.sheet.confirm') }}</button>
     </div>
   </div>
 </div>
@@ -1291,7 +1297,7 @@ function buildClimateControls(eid, state) {
       ${hvacModes.map(m => `<button data-action="set-hvac" data-eid="${esc(eid)}" data-mode="${esc(m)}"
         role="radio" aria-checked="${activeMode === m}"
         class="px-3 py-1 rounded-full text-xs font-display font-semibold transition-colors ${activeMode === m
-          ? 'bg-primary text-white' : 'bg-surface-light dark:bg-surface-dark text-muted border border-border-light dark:border-border-dark'}"
+          ? 'bg-primary text-on-primary' : 'bg-surface-light dark:bg-surface-dark text-muted border border-border-light dark:border-border-dark'}"
         ><span aria-hidden="true" class="material-symbols-outlined text-sm align-middle mr-0.5">${HVAC_ICONS[m] || 'thermostat'}</span>${esc(hvacLabel(m))}</button>`).join('')}
     </div>
   </div>`;
@@ -1343,7 +1349,7 @@ function buildMediaControls(eid, state) {
     <div class="flex items-center gap-3 mb-3">
       <button data-action="media-cmd" data-eid="${esc(eid)}" data-service="${playing ? 'media_pause' : 'media_play'}" id="play-btn-${cssId(eid)}"
         class="w-11 h-11 rounded-full bg-primary flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform">
-        <span aria-hidden="true" class="material-symbols-outlined filled text-white text-xl">${playing ? 'pause' : 'play_arrow'}</span>
+        <span aria-hidden="true" class="material-symbols-outlined filled text-on-primary text-xl">${playing ? 'pause' : 'play_arrow'}</span>
       </button>
       <div class="flex-1 min-w-0">
         <div class="text-sm font-semibold truncate" id="media-title-${cssId(eid)}">${esc(title || state.state)}</div>
@@ -1728,7 +1734,7 @@ function updateClimateCard(eid, state) {
     pillsEl.innerHTML = hvacModes.map(m => `<button data-action="set-hvac" data-eid="${esc(eid)}" data-mode="${esc(m)}"
       role="radio" aria-checked="${activeMode === m}"
       class="px-3 py-1 rounded-full text-xs font-display font-semibold transition-colors ${activeMode === m
-        ? 'bg-primary text-white' : 'bg-surface-light dark:bg-surface-dark text-muted border border-border-light dark:border-border-dark'}"
+        ? 'bg-primary text-on-primary' : 'bg-surface-light dark:bg-surface-dark text-muted border border-border-light dark:border-border-dark'}"
       ><span aria-hidden="true" class="material-symbols-outlined text-sm align-middle mr-0.5">${HVAC_ICONS[m] || 'thermostat'}</span>${esc(hvacLabel(m))}</button>`).join('');
   }
 
@@ -1785,7 +1791,7 @@ function updateMediaCard(eid, state) {
   const playing = state.state === 'playing';
   const btn = document.getElementById(`play-btn-${cssId(eid)}`);
   if (btn) {
-    btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined filled text-white text-xl">${playing ? 'pause' : 'play_arrow'}</span>`;
+    btn.innerHTML = `<span aria-hidden="true" class="material-symbols-outlined filled text-on-primary text-xl">${playing ? 'pause' : 'play_arrow'}</span>`;
     btn.dataset.service = playing ? 'media_pause' : 'media_play';
   }
   const titleEl = document.getElementById(`media-title-${cssId(eid)}`);

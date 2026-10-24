@@ -25,7 +25,7 @@
 </style>
 {% endblock %}
 
-{% block body_attrs %}class="loading bg-bg-light dark:bg-bg-dark text-soot dark:text-gray-100 font-sans antialiased min-h-dvh"{% endblock %}
+{% block body_attrs %}class="loading bg-bg-light dark:bg-bg-dark text-fg-light dark:text-fg-dark font-sans antialiased min-h-dvh"{% endblock %}
 
 {% block body %}
 <!-- Login Screen -->
@@ -68,7 +68,7 @@
         <span class="text-sm">{{ t('page.login.remember') }}</span>
       </label>
       <div id="l-error" role="alert" class="text-primary text-xs min-h-[18px]"></div>
-      <button data-action="do-login" class="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-display font-semibold text-sm transition-colors">
+      <button data-action="do-login" class="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-display font-semibold text-sm transition-colors">
         {{ t('page.login.sign_in') }}
       </button>
     </div>
@@ -126,7 +126,7 @@
     </div>
     {% endif %}
     <!-- Create Token Button -->
-    <button data-action="open-create-modal" class="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-display font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-6 shadow-lg shadow-primary/20">
+    <button data-action="open-create-modal" class="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-display font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-6 shadow-lg shadow-primary/20">
       <span aria-hidden="true" class="material-symbols-outlined text-lg">add_circle</span>
       {{ t('page.main.create_token') }}
     </button>
@@ -247,6 +247,14 @@
       </div>
 {{ info_fields('f') }}
       <div>
+        <label class="block text-xs font-mono uppercase tracking-wider text-muted mb-1.5">{{ t('branding.heading') }} <span class="text-muted/60 normal-case tracking-normal">{{ t('common.optional') }}</span></label>
+        <button type="button" data-action="open-branding-create"
+          class="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-sm hover:border-primary transition-colors">
+          <span id="f-branding-summary" class="truncate text-muted">{{ t('branding.none') }}</span>
+          <span aria-hidden="true" class="material-symbols-outlined text-base text-muted">palette</span>
+        </button>
+      </div>
+      <div>
         <label class="block text-xs font-mono uppercase tracking-wider text-muted mb-1.5">{{ t('page.create.entities') }}</label>
         <div id="create-picker"></div>
       </div>
@@ -254,7 +262,7 @@
     <div id="create-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="create" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-create" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.create.submit') }}</button>
+      <button data-action="submit-create" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.create.submit') }}</button>
     </div>
   </div>
 </div>
@@ -308,7 +316,7 @@
 
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="entity" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-entity-meta" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.entity.apply') }}</button>
+      <button data-action="submit-entity-meta" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.entity.apply') }}</button>
     </div>
   </div>
 </div>
@@ -334,7 +342,7 @@
     <div id="template-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="template" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-template" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-template" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -353,7 +361,7 @@
     <div id="edit-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="edit" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-edit" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-edit" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -394,7 +402,7 @@
     <div id="extend-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="extend" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button id="extend-submit-btn" data-action="submit-extend" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('action.extend') }}</button>
+      <button id="extend-submit-btn" data-action="submit-extend" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('action.extend') }}</button>
     </div>
   </div>
 </div>
@@ -419,7 +427,7 @@
     <div id="pin-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="pin" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-pin" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-pin" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
 
     <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
@@ -479,7 +487,26 @@
     <div id="schedule-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="schedule" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-schedule" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-schedule" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Branding Modal: shared by the create form (held until Create) and a link's Branding button (saved at once) -->
+<div class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-soot/40 dark:bg-black/50 backdrop-blur-sm" id="branding-modal">
+  <div class="modal-animate bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" role="dialog" aria-modal="true" aria-labelledby="branding-modal-title">
+    <div class="flex items-center justify-between mb-1">
+      <h2 id="branding-modal-title" class="text-lg font-serif">{{ t('branding.heading') }}</h2>
+      <button data-action="close-modal" data-modal="branding" aria-label="{{ t('page.common.close_dialog') }}" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-soot/5 dark:hover:bg-white/5 text-muted transition-colors">
+        <span aria-hidden="true" class="material-symbols-outlined text-xl">close</span>
+      </button>
+    </div>
+    <div id="branding-token-label" class="text-sm text-muted mb-3"></div>
+    <div id="branding-body"></div>
+    <div id="branding-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
+    <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
+      <button data-action="close-modal" data-modal="branding" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
+      <button data-action="submit-branding" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -498,7 +525,7 @@
     <div id="info-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="info" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-info" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-info" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -531,7 +558,7 @@
     <div id="settings-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="settings" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-settings" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-settings" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -544,7 +571,7 @@
     <p class="text-sm text-muted mb-5" id="confirm-body"></p>
     <div class="flex gap-2 justify-center">
       <button data-action="close-modal" data-modal="confirm" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button id="confirm-ok" data-action="confirm-ok" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.confirm') }}</button>
+      <button id="confirm-ok" data-action="confirm-ok" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.confirm') }}</button>
     </div>
   </div>
 </div>
@@ -973,6 +1000,10 @@ function renderTokens() {
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${t.has_pin ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
             <span aria-hidden="true" class="material-symbols-outlined text-sm">${t.has_pin ? 'lock' : 'lock_open'}</span> ${esc(t.has_pin ? tr('action.pin_protected') : tr('action.add_pin'))}
           </button>
+          <button data-id="${esc(t.id)}" data-action="open-branding-modal"
+            class="col-span-2 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${hasBranding(t) ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
+            <span aria-hidden="true" class="material-symbols-outlined text-sm">palette</span> ${esc(tr('action.branding'))}
+          </button>
         </div>
         ${t.has_pin ? `<div class="grid grid-cols-2 gap-2 mt-2">
           <button data-id="${esc(t.id)}" data-action="copy-link-without-pin"
@@ -1220,7 +1251,7 @@ function renderPicker(containerId, pickerState) {
     <div class="flex flex-wrap gap-1.5 mb-3">
       ${PICKER_DOMAINS.map(d => `<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-display font-medium border transition-colors
         ${pickerState.filter === d
-          ? 'bg-primary text-white border-primary'
+          ? 'bg-primary text-on-primary border-primary'
           : 'border-border-light dark:border-border-dark text-muted hover:border-accent dark:hover:border-accent'}"
         data-action="picker-filter" data-container="${containerId}" data-domain="${d}">
         <span aria-hidden="true" class="material-symbols-outlined text-sm">${PICKER_ICONS[d] || 'devices'}</span>
@@ -1897,6 +1928,10 @@ function openCreateModal(preset = {}) {
   // here so the admin can change a line that named the last guest.
   setInfoFields('f', preset.infoText, preset.infoTextInFooter);
   document.getElementById('create-error').textContent = '';
+  // Branding comes along with a duplicate (the logo is copied by the server,
+  // so the copy starts as the same page apart from its own slug).
+  createBranding = preset.branding ? brandingFromToken(preset.branding, preset.copyLogoFrom) : emptyBranding();
+  updateBrandingSummary();
   // A duplicate passes the source token's timing through
   // timingPresetFromToken, which keeps the start blank: a start time belongs
   // to one booking the way the slug and the PIN belong to one guest, and a
@@ -1941,6 +1976,11 @@ async function submitCreate() {
       && document.getElementById('f-show-remaining').checked,
     ...readInfoFields('f'),
   };
+  const brandBody = brandingRequestBody(createBranding);
+  if (brandBody) body.branding = brandBody;
+  if (createBranding.copyFrom && createBranding.hasLogo && !createBranding.file && !createBranding.removeLogo) {
+    body.copy_logo_from = createBranding.copyFrom;
+  }
 
     const r = await fetch(`${BASE}/admin/tokens`, {
     method: 'POST',
@@ -1952,6 +1992,12 @@ async function submitCreate() {
     const token = await r.json();
     closeCreateModal();
     showToast(tr('create.created'), 'success');
+    // The link exists either way; a logo that is refused is reported and can
+    // be added again from the link's Branding button.
+    if (createBranding.file) {
+      const msg = await uploadBrandingLogo(token.id, createBranding.file);
+      if (msg) showToast(msg, 'error');
+    }
     loadTokens();
     loadActivity();
     copyUrl(guestLink(token.slug));
@@ -1979,7 +2025,337 @@ async function duplicateToken(tokenId) {
     infoText: token.info_text,
     infoTextInFooter: token.info_text_in_footer,
     groupHeadings: token.group_headings || {},
+    branding: token,
+    copyLogoFrom: token.id,
   });
+}
+
+// ── Branding dialog ───────────────────────────────────────────────────
+// One dialog for two jobs. From the create form it only fills in
+// createBranding, which is sent with Create. From a link's Branding button it
+// saves straight away. The colour sample comes from the server, like the
+// settings one, so a blank colour is worked out in one place.
+const BRAND_EYEBROW_MAX = 40, BRAND_TITLE_MAX = 80;
+const BRAND_H_MIN = 24, BRAND_H_MAX = 96, BRAND_H_DEFAULT = 40;
+const BRAND_LOGO_MAX_BYTES = 512 * 1024;
+const BRAND_COLOR_KEYS = [
+  ['brand_primary', false], ['brand_secondary', true], ['brand_accent', true],
+  ['brand_bg', false], ['brand_surface', true], ['brand_text', true],
+  ['brand_dark_bg', true], ['brand_dark_surface', true], ['brand_dark_text', true],
+];
+let brandCtx = null;          // { mode: 'create' | 'edit', tokenId, state }
+let createBranding = emptyBranding();
+let brandGlobal = {};         // the global colours in effect, for the starting values
+let brandPreviewTimer = null;
+let brandPreviewSeq = 0;
+
+function emptyBranding() {
+  return { eyebrow: '', title: '', height: BRAND_H_DEFAULT, useGlobal: true, colors: {},
+    file: null, fileUrl: null, hasLogo: false, logoSize: '', removeLogo: false, copyFrom: null };
+}
+
+function brandingFromToken(t, copyFrom) {
+  const b = (t && t.branding) || {};
+  const s = emptyBranding();
+  s.eyebrow = b.eyebrow || '';
+  s.title = b.title || '';
+  s.height = b.logo_height || BRAND_H_DEFAULT;
+  s.useGlobal = !b.colors;
+  s.colors = Object.assign({}, b.colors || {});
+  if (b.logo) { s.hasLogo = true; s.logoSize = `${b.logo.width} x ${b.logo.height}`; }
+  s.copyFrom = copyFrom || null;
+  return s;
+}
+
+function hasBranding(t) {
+  const b = t.branding;
+  return Boolean(b && (b.eyebrow || b.title || b.logo || b.colors));
+}
+
+// What to send as `branding` on create, or null when nothing is set.
+function brandingRequestBody(s) {
+  const any = s.eyebrow || s.title || s.hasLogo || s.file || !s.useGlobal;
+  if (!any) return null;
+  return { eyebrow: s.eyebrow, title: s.title, logo_height: s.height, colors: s.useGlobal ? null : s.colors };
+}
+
+function updateBrandingSummary() {
+  const s = createBranding;
+  const bits = [];
+  if (s.file || (s.hasLogo && !s.removeLogo)) bits.push(tr('branding.sum_logo'));
+  if (s.eyebrow) bits.push(s.eyebrow);
+  if (s.title) bits.push(s.title);
+  if (!s.useGlobal) bits.push(tr('branding.sum_colors'));
+  const el = document.getElementById('f-branding-summary');
+  el.textContent = bits.length ? bits.join(' · ') : tr('branding.none');
+  el.classList.toggle('text-muted', !bits.length);
+}
+
+function brandColorLabel(key) {
+  const f = SETTINGS_FIELDS.find(x => x.key === key);
+  return f ? f.label : key;
+}
+
+function brandingFormHtml(s) {
+  const input = 'w-full px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
+  const lab = 'block text-xs font-mono uppercase tracking-wider text-muted mb-1.5';
+  const logoNote = s.file ? s.file.name : (s.hasLogo && !s.removeLogo ? tr('branding.logo_current', { size: s.logoSize }) : tr('branding.logo_none'));
+  const colorRows = BRAND_COLOR_KEYS.map(([key, optional]) => {
+    const v = s.colors[key] || '';
+    const auto = optional && !v;
+    const shown = v || brandGlobal[key] || '#808080';
+    return `<div class="flex items-center gap-3">
+      <input id="br-c-${key}" data-brand-color="${key}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} aria-label="${esc(brandColorLabel(key))}"
+        class="w-12 h-9 p-1 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer${auto ? ' opacity-60' : ''}">
+      <span class="text-sm flex-1 min-w-0 truncate">${esc(brandColorLabel(key))}</span>
+      ${optional ? `<label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer"><input id="br-a-${key}" data-brand-auto="${key}" type="checkbox" class="w-4 h-4 rounded accent-primary"${auto ? ' checked' : ''}> ${esc(tr('settings.auto'))}</label>` : ''}
+    </div>`;
+  }).join('');
+  const logoShown = s.file || (s.hasLogo && !s.removeLogo);
+  return `<div class="space-y-4">
+    <div>
+      <div class="flex items-center gap-1.5 mb-1.5">
+        <label for="br-file" class="text-xs font-mono uppercase tracking-wider text-muted">${esc(tr('branding.logo'))}</label>
+        <span class="relative group">
+          <button type="button" data-action="toggle-brand-help" aria-label="${esc(tr('branding.logo_help_label'))}" aria-describedby="br-help"
+            class="w-5 h-5 flex items-center justify-center rounded-full text-muted hover:text-ink focus:text-ink outline-none">
+            <span aria-hidden="true" class="material-symbols-outlined text-base">info</span>
+          </button>
+          <span id="br-help" role="tooltip" class="hidden group-hover:block group-focus-within:block absolute left-0 top-6 z-10 w-64 p-2.5 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark shadow-lg text-[11px] normal-case tracking-normal font-sans text-ink">${esc(tr('branding.logo_help'))}</span>
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <input id="br-file" type="file" accept="image/png,image/webp" class="text-xs flex-1 min-w-0">
+        ${logoShown ? `<button type="button" data-action="remove-brand-logo" class="px-2.5 py-1.5 text-xs rounded-lg border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5">${esc(tr('branding.logo_remove'))}</button>` : ''}
+      </div>
+      <p class="text-[11px] text-muted mt-1">${esc(logoNote)}</p>
+    </div>
+    <div class="${logoShown ? '' : 'hidden'}" id="br-height-row">
+      <label for="br-height" class="${lab}">${esc(tr('branding.height'))} <span id="br-height-val" class="normal-case tracking-normal text-muted/70">${s.height} px</span></label>
+      <input id="br-height" type="range" min="${BRAND_H_MIN}" max="${BRAND_H_MAX}" step="2" value="${s.height}" class="w-full accent-primary">
+    </div>
+    <div>
+      <label for="br-eyebrow" class="${lab}">${esc(tr('branding.eyebrow'))}</label>
+      <input id="br-eyebrow" type="text" maxlength="${BRAND_EYEBROW_MAX}" value="${esc(s.eyebrow)}" placeholder="${esc(tr('branding.eyebrow_placeholder'))}" class="${input}">
+    </div>
+    <div>
+      <label for="br-title" class="${lab}">${esc(tr('branding.title'))}</label>
+      <input id="br-title" type="text" maxlength="${BRAND_TITLE_MAX}" value="${esc(s.title)}" placeholder="${esc(tr('branding.title_placeholder'))}" class="${input}">
+    </div>
+    <div class="sticky top-0 z-10 py-2 bg-surface-light dark:bg-surface-dark">
+      <div id="br-preview" class="grid grid-cols-2 gap-2"></div>
+      <ul id="br-warnings" class="text-[11px] text-primary mt-1.5 space-y-0.5"></ul>
+    </div>
+    <div>
+      <label class="flex items-center gap-2.5 cursor-pointer">
+        <input id="br-global" type="checkbox" class="w-4 h-4 rounded accent-primary"${s.useGlobal ? ' checked' : ''}>
+        <span class="text-sm">${esc(tr('branding.use_global'))}</span>
+      </label>
+      <div id="br-colors" class="space-y-2 mt-3 ${s.useGlobal ? 'hidden' : ''}">${colorRows}</div>
+    </div>
+  </div>`;
+}
+
+// The form's fields back into the dialog's state.
+function readBrandingForm() {
+  const s = brandCtx.state;
+  s.eyebrow = document.getElementById('br-eyebrow').value.trim();
+  s.title = document.getElementById('br-title').value.trim();
+  s.height = Number(document.getElementById('br-height').value) || BRAND_H_DEFAULT;
+  s.useGlobal = document.getElementById('br-global').checked;
+  if (!s.useGlobal) {
+    for (const [key, optional] of BRAND_COLOR_KEYS) {
+      const auto = document.getElementById(`br-a-${key}`);
+      s.colors[key] = (optional && auto && auto.checked) ? '' : document.getElementById(`br-c-${key}`).value.toUpperCase();
+    }
+  }
+  return s;
+}
+
+function brandPanelHtml(mode, c, s) {
+  const [bg, surface, border, text, muted, accent] = ['bg', 'surface', 'border', 'text', 'muted', 'accent'].map(k => safeHex(c[k]));
+  const label = tr(mode === 'light' ? 'settings.mode_light' : 'settings.mode_dark');
+  const h = Math.round(s.height * 0.5);
+  const logo = s.fileUrl
+    ? `<img src="${esc(s.fileUrl)}" alt="" style="height:${h}px;max-width:50%" class="object-contain flex-shrink-0">`
+    : (s.hasLogo && !s.removeLogo
+      ? `<span aria-hidden="true" class="material-symbols-outlined flex-shrink-0" style="font-size:${h}px;color:${muted}">image</span>` : '');
+  return `<div class="rounded-xl p-2.5 border" style="background:${bg};border-color:${border};color:${text}">
+    <div class="text-[10px] font-mono uppercase tracking-wider mb-1.5" style="color:${muted}">${esc(label)}</div>
+    <div class="rounded-lg p-2 border" style="background:${surface};border-color:${border}">
+      <div class="flex items-center gap-2">${logo}<span class="text-[11px] font-medium truncate" style="color:${accent}">${esc(s.eyebrow || (logo ? '' : tr('branding.sample_eyebrow')))}</span></div>
+      <div class="text-sm font-serif mt-1 break-words">${esc(s.title || tr('branding.sample_title'))}</div>
+    </div>
+  </div>`;
+}
+
+function scheduleBrandPreview(delay = 150) {
+  clearTimeout(brandPreviewTimer);
+  brandPreviewTimer = setTimeout(runBrandPreview, delay);
+}
+
+async function runBrandPreview() {
+  if (!brandCtx) return;
+  const s = readBrandingForm();
+  const values = {};
+  if (!s.useGlobal) Object.assign(values, s.colors);
+  const seq = ++brandPreviewSeq;
+  try {
+    const r = await fetch(`${BASE}/admin/settings/theme-preview`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(values),
+    });
+    if (!r.ok || seq !== brandPreviewSeq || !brandCtx) return;
+    const p = await r.json();
+    if (s.useGlobal) {
+      brandGlobal = Object.assign({}, p.resolved || {});
+      // The own-colour choosers start from what the link shows now.
+      for (const [key] of BRAND_COLOR_KEYS) {
+        const el = document.getElementById(`br-c-${key}`);
+        if (el && !s.colors[key] && HEX_RE.test(brandGlobal[key] || '')) el.value = brandGlobal[key].toLowerCase();
+      }
+    } else for (const [key, optional] of BRAND_COLOR_KEYS) {
+      const auto = document.getElementById(`br-a-${key}`);
+      const el = document.getElementById(`br-c-${key}`);
+      if (optional && auto && el && auto.checked && HEX_RE.test((p.resolved || {})[key] || '')) el.value = p.resolved[key].toLowerCase();
+    }
+    const box = document.getElementById('br-preview');
+    if (!box) return;
+    box.innerHTML = brandPanelHtml('light', p.light || {}, s) + brandPanelHtml('dark', p.dark || {}, s);
+    const modeNames = { light: tr('settings.mode_light'), dark: tr('settings.mode_dark'), both: '' };
+    const warningText = (what, mode) => {
+      if (what === 'text') return tr('settings.warn_text', { mode });
+      if (what === 'muted') return tr('settings.warn_muted', { mode });
+      if (what === 'separation') return tr('settings.warn_separation', { mode });
+      return tr('settings.warn_button');
+    };
+    document.getElementById('br-warnings').innerHTML = (p.warnings || []).map(([mode, what]) =>
+      `<li>${esc(warningText(what, modeNames[mode] || ''))}</li>`).join('');
+  } catch (_) { /* the sample is a courtesy; saving does not depend on it */ }
+}
+
+const onBrandEvent = e => {
+  const t = e.target;
+  if (!brandCtx || !t || !t.closest || !t.closest('#branding-body')) return;
+  if (t.id === 'br-file') { if (e.type === 'change') onBrandFile(t); return; }
+  if (t.id === 'br-height') {
+    document.getElementById('br-height-val').textContent = `${t.value} px`;
+  } else if (t.id === 'br-global') {
+    document.getElementById('br-colors').classList.toggle('hidden', t.checked);
+  } else if (t.dataset && t.dataset.brandAuto) {
+    const el = document.getElementById(`br-c-${t.dataset.brandAuto}`);
+    if (el) { el.disabled = t.checked; el.classList.toggle('opacity-60', t.checked); }
+  }
+  scheduleBrandPreview(t.type === 'text' || t.type === 'color' || t.type === 'range' ? 150 : 0);
+};
+document.getElementById('branding-modal').addEventListener('input', onBrandEvent);
+document.getElementById('branding-modal').addEventListener('change', onBrandEvent);
+
+function drawBrandingForm() {
+  document.getElementById('branding-body').innerHTML = brandingFormHtml(brandCtx.state);
+  scheduleBrandPreview(0);
+}
+
+function openBrandingDialog(ctx, label) {
+  brandCtx = ctx;
+  document.getElementById('branding-token-label').textContent = label || '';
+  document.getElementById('branding-error').textContent = '';
+  drawBrandingForm();
+  openModal('branding-modal');
+}
+
+function openBrandingCreate() {
+  // Work on a copy so Cancel leaves what was already chosen alone.
+  const copy = Object.assign({}, createBranding, { colors: Object.assign({}, createBranding.colors) });
+  if (copy.file) copy.fileUrl = URL.createObjectURL(copy.file);
+  openBrandingDialog({ mode: 'create', tokenId: null, state: copy }, '');
+}
+
+function openBrandingEdit(tokenId) {
+  const t = tokens.find(x => x.id === tokenId);
+  if (!t) return;
+  openBrandingDialog({ mode: 'edit', tokenId, state: brandingFromToken(t, null) }, t.label);
+}
+
+function closeBrandingModal() {
+  if (brandCtx && brandCtx.state.fileUrl) URL.revokeObjectURL(brandCtx.state.fileUrl);
+  clearTimeout(brandPreviewTimer);
+  brandCtx = null;
+  closeModal('branding-modal');
+}
+
+function onBrandFile(input) {
+  const s = brandCtx.state;
+  const err = document.getElementById('branding-error');
+  err.textContent = '';
+  const f = input.files && input.files[0];
+  if (!f) return;
+  if (f.size > BRAND_LOGO_MAX_BYTES) {
+    err.textContent = tr('branding.err_size');
+    input.value = '';
+    return;
+  }
+  if (s.fileUrl) URL.revokeObjectURL(s.fileUrl);
+  s.file = f;
+  s.fileUrl = URL.createObjectURL(f);
+  s.removeLogo = false;
+  // Redrawing would drop the chosen file from the input, so the logo bits are
+  // updated in place and the server has the final say on size and format.
+  readBrandingForm();
+  document.getElementById('br-height-row').classList.remove('hidden');
+  scheduleBrandPreview(0);
+}
+
+function removeBrandLogo() {
+  readBrandingForm();
+  const s = brandCtx.state;
+  if (s.fileUrl) URL.revokeObjectURL(s.fileUrl);
+  s.file = null; s.fileUrl = null; s.removeLogo = true;
+  drawBrandingForm();
+}
+
+async function uploadBrandingLogo(tokenId, file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch(`${BASE}/admin/tokens/${tokenId}/logo`, { method: 'POST', body: fd });
+    if (r.ok) return '';
+    const err = await r.json().catch(() => ({}));
+    return typeof err.detail === 'string' ? err.detail : tr('branding.err_upload');
+  } catch (_) { return tr('branding.err_upload'); }
+}
+
+async function submitBranding() {
+  if (!brandCtx) return;
+  const s = readBrandingForm();
+  const err = document.getElementById('branding-error');
+  if (brandCtx.mode === 'create') {
+    // Stage it: the logo file itself is uploaded after the link exists.
+    createBranding = Object.assign({}, s, { colors: Object.assign({}, s.colors), fileUrl: null });
+    updateBrandingSummary();
+    brandCtx.state.fileUrl = null;   // not revoked here: nothing else holds it
+    if (s.fileUrl) URL.revokeObjectURL(s.fileUrl);
+    closeBrandingModal();
+    return;
+  }
+  const r = await fetch(`${BASE}/admin/tokens/${brandCtx.tokenId}/branding`, {
+    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ eyebrow: s.eyebrow, title: s.title, logo_height: s.height, colors: s.useGlobal ? null : s.colors }),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    err.textContent = typeof e.detail === 'string' ? e.detail : tr('branding.err_save');
+    return;
+  }
+  const tokenId = brandCtx.tokenId;
+  if (s.file) {
+    const msg = await uploadBrandingLogo(tokenId, s.file);
+    if (msg) { err.textContent = msg; loadTokens(); return; }
+  } else if (s.removeLogo && s.hasLogo) {
+    await fetch(`${BASE}/admin/tokens/${tokenId}/logo`, { method: 'DELETE' });
+  }
+  closeBrandingModal();
+  showToast(tr('branding.saved'), 'success');
+  loadTokens();
 }
 
 // ── Entity Settings Modal ─────────────────────────────────────────────
@@ -2444,8 +2820,18 @@ const SETTINGS_FIELDS = [
   { key: 'guest_url', label: tr('settings.guest_url'), type: 'text', maxlength: 300,
     placeholder: 'https://guest.myhouse.com',
     hint: tr('settings.guest_url_hint') },
-  { key: 'brand_primary', label: tr('settings.brand_primary'), type: 'color', hint: tr('settings.brand_primary_hint') },
-  { key: 'brand_bg', label: tr('settings.brand_bg'), type: 'color', hint: tr('settings.brand_bg_hint') },
+  // The colours are drawn together as one section with a live preview (see
+  // colorsSectionHtml), at the place of the first of them. An optional colour
+  // can be left on Auto, which saves it blank so the server works it out.
+  { key: 'brand_primary', label: tr('settings.brand_primary'), type: 'color', group: 'brand', hint: tr('settings.brand_primary_hint') },
+  { key: 'brand_secondary', label: tr('settings.brand_secondary'), type: 'color', optional: true, group: 'brand', hint: tr('settings.brand_secondary_hint') },
+  { key: 'brand_accent', label: tr('settings.brand_accent'), type: 'color', optional: true, group: 'brand', hint: tr('settings.brand_accent_hint') },
+  { key: 'brand_bg', label: tr('settings.brand_bg'), type: 'color', group: 'light', hint: tr('settings.brand_bg_hint') },
+  { key: 'brand_surface', label: tr('settings.brand_surface'), type: 'color', optional: true, group: 'light', hint: tr('settings.brand_surface_hint') },
+  { key: 'brand_text', label: tr('settings.brand_text'), type: 'color', optional: true, group: 'light', hint: tr('settings.brand_text_hint') },
+  { key: 'brand_dark_bg', label: tr('settings.brand_dark_bg'), type: 'color', optional: true, group: 'dark', hint: tr('settings.brand_dark_bg_hint') },
+  { key: 'brand_dark_surface', label: tr('settings.brand_dark_surface'), type: 'color', optional: true, group: 'dark', hint: tr('settings.brand_dark_surface_hint') },
+  { key: 'brand_dark_text', label: tr('settings.brand_dark_text'), type: 'color', optional: true, group: 'dark', hint: tr('settings.brand_dark_text_hint') },
   { key: 'access_log_retention_days', label: tr('settings.retention'), type: 'number', min: 1, max: 3650,
     hint: tr('settings.retention_hint') },
   { key: 'phone_region', label: tr('settings.phone_region'), type: 'text', maxlength: 2,
@@ -2453,7 +2839,8 @@ const SETTINGS_FIELDS = [
 ];
 // Rendered into the page by the server, so a change is only visible after a
 // reload. The rest (the contact message, retention) are read per request.
-const SETTINGS_NEED_RELOAD = ['app_name', 'guest_url', 'brand_bg', 'brand_primary'];
+const SETTINGS_NEED_RELOAD = ['app_name', 'guest_url',
+  ...SETTINGS_FIELDS.filter(f => f.type === 'color').map(f => f.key)];
 let settingsState = {};
 
 function settingsInputHtml(f, entry) {
@@ -2464,7 +2851,17 @@ function settingsInputHtml(f, entry) {
     return `<textarea id="${id}" rows="${f.rows || 2}" maxlength="${f.maxlength}" class="${cls}">${esc(value)}</textarea>`;
   }
   if (f.type === 'color') {
-    return `<input id="${id}" type="color" value="${esc(value.toLowerCase())}" class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">`;
+    // An optional colour left blank is on Auto: the picker is greyed out and
+    // shows what the server works out, which the preview call fills in.
+    const auto = !!f.optional && value === '';
+    const shown = auto ? '#808080' : value;
+    return `<div class="flex items-center gap-3">
+      <input id="${id}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer${auto ? ' opacity-60' : ''}">
+      ${f.optional ? `<label class="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
+        <input id="${id}-auto" type="checkbox" data-auto-for="${esc(f.key)}" class="w-4 h-4 rounded accent-primary"${auto ? ' checked' : ''}>
+        ${esc(tr('settings.auto'))}
+      </label>` : ''}
+    </div>`;
   }
   if (f.type === 'number') {
     return `<input id="${id}" type="number" min="${f.min}" max="${f.max}" step="1" value="${esc(value)}" class="${cls}">`;
@@ -2472,24 +2869,165 @@ function settingsInputHtml(f, entry) {
   return `<input id="${id}" type="text" maxlength="${f.maxlength}" placeholder="${esc(f.placeholder || '')}" value="${esc(value)}" class="${cls}">`;
 }
 
-function renderSettings() {
-  document.getElementById('settings-fields').innerHTML = SETTINGS_FIELDS.map(f => {
-    const entry = settingsState[f.key];
-    if (!entry) return '';
-    const option = entry.option === '' || entry.option == null ? tr('settings.empty') : String(entry.option);
-    return `<div>
-      <div class="flex items-center justify-between gap-2 mb-1.5">
-        <label for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted">${esc(f.label)}</label>
-        ${entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
-          class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
-          <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
-        </button>` : ''}
-      </div>
-      ${settingsInputHtml(f, entry)}
-      <p class="text-[11px] text-muted mt-1">${esc(f.hint)}${entry.overridden
-        ? ` <span class="text-accent">${esc(tr('settings.overriding', { option }))}</span>` : ''}</p>
-    </div>`;
+function settingRowHtml(f, entry) {
+  const option = entry.option === '' || entry.option == null ? tr('settings.empty') : String(entry.option);
+  return `<div>
+    <div class="flex items-center justify-between gap-2 mb-1.5">
+      <label for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted">${esc(f.label)}</label>
+      ${entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
+        class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
+        <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
+      </button>` : ''}
+    </div>
+    ${settingsInputHtml(f, entry)}
+    <p class="text-[11px] text-muted mt-1">${esc(f.hint)}${entry.overridden
+      ? ` <span class="text-accent">${esc(tr('settings.overriding', { option }))}</span>` : ''}</p>
+  </div>`;
+}
+
+// The colours: a sample of light and dark mode that stays in view while the
+// fields are edited, then the fields in three groups. The server works out the
+// sample (POST /admin/settings/theme-preview) so the dashboard never
+// reimplements how a blank colour is derived.
+function colorsSectionHtml() {
+  const groups = [['brand', 'settings.colors_brand'], ['light', 'settings.colors_light'], ['dark', 'settings.colors_dark']];
+  const body = groups.map(([g, title]) => {
+    const rows = SETTINGS_FIELDS
+      .filter(f => f.type === 'color' && f.group === g && settingsState[f.key])
+      .map(f => settingRowHtml(f, settingsState[f.key])).join('');
+    return rows ? `<div class="space-y-4"><h4 class="text-sm font-serif">${esc(tr(title))}</h4>${rows}</div>` : '';
   }).join('');
+  return `<section class="space-y-4 pt-4 border-t border-border-light dark:border-border-dark">
+    <div>
+      <h3 class="text-base font-serif">${esc(tr('settings.colors_title'))}</h3>
+      <p class="text-[11px] text-muted mt-1">${esc(tr('settings.colors_hint'))}</p>
+    </div>
+    <div class="sticky top-0 z-10 py-2 bg-surface-light dark:bg-surface-dark">
+      <div id="theme-preview" class="grid grid-cols-2 gap-2"></div>
+      <ul id="theme-warnings" class="text-[11px] text-primary mt-1.5 space-y-0.5"></ul>
+    </div>
+    ${body}
+  </section>`;
+}
+
+function renderSettings() {
+  let colorsDone = false;
+  document.getElementById('settings-fields').innerHTML = SETTINGS_FIELDS.map(f => {
+    if (f.type === 'color') {
+      if (colorsDone) return '';
+      colorsDone = true;
+      return colorsSectionHtml();
+    }
+    const entry = settingsState[f.key];
+    return entry ? settingRowHtml(f, entry) : '';
+  }).join('');
+  scheduleThemePreview(0);
+}
+
+// ── Colour preview ────────────────────────────────────────────────────
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const safeHex = v => (typeof v === 'string' && HEX_RE.test(v)) ? v : '#808080';
+let themePreviewTimer = null;
+let themePreviewSeq = 0;
+let settingsListenersBound = false;
+
+function previewPanelHtml(mode, c) {
+  const [bg, surface, border, text, muted, primary, onPrimary, accent, secondary] =
+    ['bg', 'surface', 'border', 'text', 'muted', 'primary', 'on_primary', 'accent', 'secondary'].map(k => safeHex(c[k]));
+  const label = tr(mode === 'light' ? 'settings.mode_light' : 'settings.mode_dark');
+  return `<div class="rounded-xl p-2.5 border" style="background:${bg};border-color:${border};color:${text}">
+    <div class="text-[10px] font-mono uppercase tracking-wider mb-1.5" style="color:${muted}">${esc(label)}</div>
+    <div class="rounded-lg p-2 border" style="background:${surface};border-color:${border}">
+      <div class="text-sm font-serif">${esc(tr('settings.preview_heading'))}</div>
+      <div class="text-[11px] mb-2" style="color:${muted}">${esc(tr('settings.preview_muted'))}</div>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="px-2 py-1 rounded-md text-[11px] font-semibold" style="background:${primary};color:${onPrimary}">${esc(tr('settings.preview_button'))}</span>
+        <span class="px-2 py-1 rounded-md text-[11px]" style="background:${accent}26;color:${accent}">${esc(tr('settings.preview_accent'))}</span>
+        <span class="px-2 py-1 rounded-md text-[11px]" style="background:${secondary}26;color:${secondary}">${esc(tr('settings.preview_secondary'))}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// The colours as they stand in the open dialog, saved or not. A blank means
+// Auto for an optional one.
+function currentThemeValues() {
+  const out = {};
+  for (const f of SETTINGS_FIELDS) {
+    if (f.type !== 'color' || !settingsState[f.key]) continue;
+    const el = document.getElementById(`set-${f.key}`);
+    if (!el) continue;
+    const auto = document.getElementById(`set-${f.key}-auto`);
+    out[f.key] = (f.optional && auto && auto.checked) ? '' : el.value.toUpperCase();
+  }
+  return out;
+}
+
+function scheduleThemePreview(delay = 150) {
+  clearTimeout(themePreviewTimer);
+  themePreviewTimer = setTimeout(runThemePreview, delay);
+}
+
+async function runThemePreview() {
+  const values = currentThemeValues();
+  if (!Object.keys(values).length) return;
+  const seq = ++themePreviewSeq;
+  try {
+    const r = await fetch(`${BASE}/admin/settings/theme-preview`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(values),
+    });
+    // A slower reply to an older edit must not overwrite a newer sample.
+    if (!r.ok || seq !== themePreviewSeq) return;
+    drawThemePreview(await r.json());
+  } catch (_) { /* the sample is a courtesy; saving does not depend on it */ }
+}
+
+function drawThemePreview(p) {
+  const box = document.getElementById('theme-preview');
+  if (!box) return;
+  box.innerHTML = previewPanelHtml('light', p.light || {}) + previewPanelHtml('dark', p.dark || {});
+  // An Auto field shows the colour it currently works out to.
+  for (const f of SETTINGS_FIELDS) {
+    if (f.type !== 'color' || !f.optional) continue;
+    const auto = document.getElementById(`set-${f.key}-auto`);
+    const el = document.getElementById(`set-${f.key}`);
+    const resolved = p.resolved && p.resolved[f.key];
+    if (auto && el && auto.checked && HEX_RE.test(resolved || '')) el.value = resolved.toLowerCase();
+  }
+  const modeNames = { light: tr('settings.mode_light'), dark: tr('settings.mode_dark'), both: '' };
+  // Literal keys, not 'settings.warn_' + what: the catalogue check finds keys
+  // by reading the source.
+  const warningText = (what, mode) => {
+    if (what === 'text') return tr('settings.warn_text', { mode });
+    if (what === 'muted') return tr('settings.warn_muted', { mode });
+    if (what === 'separation') return tr('settings.warn_separation', { mode });
+    return tr('settings.warn_button');
+  };
+  const list = document.getElementById('theme-warnings');
+  if (list) {
+    list.innerHTML = (p.warnings || []).map(([mode, what]) =>
+      `<li>${esc(warningText(what, modeNames[mode] || ''))}</li>`).join('');
+  }
+}
+
+function bindSettingsListeners() {
+  if (settingsListenersBound) return;
+  settingsListenersBound = true;
+  const host = document.getElementById('settings-fields');
+  const onColorEvent = e => {
+    const t = e.target;
+    if (t.dataset && t.dataset.autoFor) {
+      const el = document.getElementById(`set-${t.dataset.autoFor}`);
+      if (el) { el.disabled = t.checked; el.classList.toggle('opacity-60', t.checked); }
+      scheduleThemePreview(0);
+    } else if (t.type === 'color') {
+      scheduleThemePreview();
+    }
+  };
+  host.addEventListener('input', onColorEvent);
+  host.addEventListener('change', onColorEvent);
 }
 
 // Only what actually changed is sent, so a save touches nothing the admin did
@@ -2506,7 +3044,8 @@ function collectSettings() {
       if (!/^\d+$/.test(value.trim())) throw new Error(tr('settings.err_whole', { label: f.label }));
       value = parseInt(value, 10);
     } else if (f.type === 'color') {
-      value = value.toUpperCase();
+      const auto = document.getElementById(`set-${f.key}-auto`);
+      value = (f.optional && auto && auto.checked) ? '' : value.toUpperCase();
     } else {
       value = value.trim();
     }
@@ -2529,6 +3068,7 @@ async function openSettingsModal() {
   if (!r.ok) { showToast(tr('settings.load_failed'), 'error'); return; }
   settingsState = (await r.json()).settings || {};
   document.getElementById('settings-error').textContent = '';
+  bindSettingsListeners();
   renderSettings();
   openModal('settings-modal');
 }
@@ -2770,6 +3310,7 @@ document.addEventListener('keydown', e => {
       'schedule-modal': closeScheduleModal,
       'info-modal': closeInfoModal,
       'settings-modal': closeSettingsModal,
+      'branding-modal': closeBrandingModal,
       'create-modal': closeCreateModal,
     };
     for (const [id, closer] of Object.entries(closers)) {
@@ -2827,6 +3368,13 @@ document.addEventListener('click', e => {
     case 'open-edit-modal': openEditModal(el.dataset.id); break;
     case 'submit-edit': submitEditEntities(); break;
 
+    // Branding dialog
+    case 'open-branding-create': openBrandingCreate(); break;
+    case 'open-branding-modal': openBrandingEdit(el.dataset.id); break;
+    case 'submit-branding': submitBranding(); break;
+    case 'remove-brand-logo': removeBrandLogo(); break;
+    case 'toggle-brand-help': document.getElementById('br-help').classList.toggle('hidden'); break;
+
     // Duplicate token
     case 'duplicate-token': duplicateToken(el.dataset.id); break;
 
@@ -2868,7 +3416,7 @@ document.addEventListener('click', e => {
 
     // Close any modal
     case 'close-modal': {
-      const modalMap = { create: closeCreateModal, edit: closeEditModal, extend: closeExtendModal, confirm: closeConfirmModal, qr: closeQrModal, entity: closeEntityModal, pin: closePinModal, template: closeTemplateModal, schedule: closeScheduleModal, info: closeInfoModal, settings: closeSettingsModal };
+      const modalMap = { create: closeCreateModal, edit: closeEditModal, extend: closeExtendModal, confirm: closeConfirmModal, qr: closeQrModal, entity: closeEntityModal, pin: closePinModal, template: closeTemplateModal, schedule: closeScheduleModal, info: closeInfoModal, settings: closeSettingsModal, branding: closeBrandingModal };
       const closer = modalMap[el.dataset.modal];
       if (closer) closer();
       break;

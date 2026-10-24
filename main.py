@@ -167,7 +167,8 @@ async def security_headers(request: Request, call_next):
         f"connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; "
         f"{frame_ancestors}"
     )
-    response.headers["Content-Security-Policy"] = csp
+    # A route that sets its own policy (the logo image) keeps it.
+    response.headers.setdefault("Content-Security-Policy", csp)
     # Prevent browser from caching HTML responses (avoids stale JS after deploys)
     content_type = response.headers.get("content-type", "")
     if "text/html" in content_type:

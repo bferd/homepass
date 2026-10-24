@@ -7,7 +7,7 @@ from fastapi import Request
 from app import i18n
 from app.build import BUILD_VERSION
 from app.config import settings
-from app.theme import brand_theme
+from app.theme import brand_from_settings, brand_theme
 
 
 def base_context(request: Request, audience: str | None = None) -> dict:
@@ -22,7 +22,7 @@ def base_context(request: Request, audience: str | None = None) -> dict:
     """
     # Read per request, not at import: the brand colours can be overridden
     # from the dashboard while the app runs.
-    brand_css, brand_bg_dark = brand_theme(settings.brand_bg, settings.brand_primary)
+    brand_css, brand_bg_dark = brand_theme(brand_from_settings(settings))
     ctx = {
         "request": request,
         "app_name": settings.app_name,

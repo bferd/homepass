@@ -1,0 +1,26 @@
+{# A link's logo, eyebrow and title, as built by app/branding.py page_context.
+   Drawn only when the link has at least one; the text is whatever the admin
+   typed, escaped by Jinja, and shown exactly as typed. The eyebrow takes the
+   palette's accent colour and the title the text colour, so the link's own
+   colours (or the global ones) apply without any colour of their own. Set
+   brand_center and brand_compact with {% with %} for the narrow, centred
+   screens (PIN, expired). #}
+{% if branding %}
+<div class="brand-header{% if brand_center %} text-center{% endif %}">
+  {% if branding.logo_url or branding.eyebrow %}
+  <div class="flex items-center gap-3{% if brand_center %} justify-center{% endif %}">
+    {% if branding.logo_url %}
+    <img src="{{ branding.logo_url }}" alt="{{ '' if (branding.title or branding.eyebrow) else app_name }}" decoding="async"
+         style="width: {{ branding.logo_width }}px; max-width: {{ branding.logo_max_width }}%; aspect-ratio: {{ branding.logo_ratio }};"
+         class="h-auto object-contain flex-shrink-0">
+    {% endif %}
+    {% if branding.eyebrow %}
+    <div class="min-w-0 text-sm font-display font-medium tracking-wide text-accent break-words">{{ branding.eyebrow }}</div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if branding.title %}
+  <div role="heading" aria-level="2" class="{% if branding.logo_url or branding.eyebrow %}mt-3 {% endif %}{% if brand_compact %}text-3xl{% else %}text-4xl sm:text-5xl{% endif %} font-serif leading-tight break-words">{{ branding.title }}</div>
+  {% endif %}
+</div>
+{% endif %}

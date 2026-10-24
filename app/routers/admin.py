@@ -6,10 +6,12 @@ import re
 import secrets
 import time
 import unicodedata
+from types import SimpleNamespace
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 
+from app import branding
 from app import database as db
 from app.client_ip import client_ip as resolve_client_ip
 from app.auth import INGRESS_SENTINEL, SESSION_COOKIE, require_admin, verify_password
@@ -19,6 +21,7 @@ from app import guest_pin
 from app import ha_client
 from app import schedule
 from app import settings_store
+from app import theme
 from app.models import (
     ACCESS_CODE_LABEL_MAX,
     ACCESS_COVER_DEVICE_CLASSES,
@@ -37,6 +40,9 @@ from app.models import (
     SUGGESTION_CATEGORIES,
     SUPPORTED_DOMAINS,
     TEMPLATE_NAME_MAX,
+    THEME_FIELDS,
+    ThemePreviewRequest,
+    TokenBrandingRequest,
     TokenCreateRequest,
     TokenDeviceBindingRequest,
     TokenInfoRequest,
@@ -47,6 +53,7 @@ from app.models import (
     TokenUpdateExpiryRequest,
 )
 from app.rate_limiter import RateLimiter
+from app.theme import brand_from_settings
 
 router = APIRouter(prefix="/admin")
 
@@ -238,6 +245,10 @@ def _row_to_response(row: Any, entity_ids: list[str] | None = None,
         # Only the section headings the admin renamed or hid, by group key;
         # {} is every heading as default.
         "group_headings": db.group_headings_from_row(row["group_headings"]),
+        # Eyebrow, title, logo size, the link's own colours (null while it uses
+        # the global ones) and whether a logo is uploaded. The image itself is
+        # never part of a token response.
+        "branding": branding.public(row["branding"]),
         "remember_pin": bool(row["remember_pin"]),
         # Whether the link is locked to one device, and when that device
         # claimed it (None while unclaimed). The claim's secret hash never
@@ -335,7 +346,20 @@ async def _create_token(body: TokenCreateRequest, expires_at: int | None = None)
         info_text=body.info_text,
         info_text_in_footer=body.info_text_in_footer,
         group_headings=body.group_headings,
+        branding=branding.stored(body.branding.model_dump()) if body.branding else None,
     )
+    if body.copy_logo_from:
+        # Duplicate. Checked after the link exists so a bad id cannot leave a
+        # half-made one behind, which means it is refused rather than ignored
+        # only when the source is unknown; a source without a logo is fine.
+        if not await db.get_token_by_id(body.copy_logo_from):
+            await db.delete_token(row["id"])
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Unknown link to copy the logo from",
+            )
+        await db.copy_token_logo(body.copy_logo_from, row["id"])
+        row = await db.get_token_by_id(row["id"])
     entity_ids = await db.get_token_entities(row["id"])
     return _row_to_response(row, entity_ids)
 
@@ -461,6 +485,121 @@ async def _set_group_headings_if_changed(row: Any, group_headings: dict | None) 
         return False
     await db.set_token_group_headings(row["id"], group_headings)
     return True
+
+
+async def _set_branding_if_changed(row: Any, change: TokenBrandingRequest | None) -> bool:
+    """Apply a branding change to a link. True only if that changed anything.
+
+    Shared with the public API, like _set_group_headings_if_changed: a value
+    equal to what is stored writes nothing, so open guest pages are told to
+    reload only when there is something new to show. Only fields the caller
+    sent are touched; ``colors`` null is a real value and means "use the global
+    colours".
+    """
+    if change is None:
+        return False
+    sent = change.model_fields_set
+    current = branding.from_row(row["branding"])
+    updated = dict(current)
+    for key in ("eyebrow", "title", "logo_height"):
+        if key in sent and getattr(change, key) is not None:
+            updated[key] = getattr(change, key)
+    if "colors" in sent:
+        updated["colors"] = change.colors
+    if updated == current:
+        return False
+    await db.set_token_branding(row["id"], branding.stored(updated))
+    return True
+
+
+@router.patch("/tokens/{token_id}/branding")
+async def update_token_branding(
+    token_id: str,
+    body: TokenBrandingRequest,
+    _: str = Depends(require_admin),
+) -> dict:
+    """Change a link's eyebrow, title, logo size or colours. A field left out
+    keeps its stored value; ``colors: null`` returns the link to the global
+    colours. The logo file has its own endpoints.
+
+    A revoked token is refused, as the info edit is. Open guest tabs are told
+    to reload so they show the change now.
+    """
+    row = await db.get_token_by_id(token_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if row["revoked"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the branding of a revoked token",
+        )
+    if await _set_branding_if_changed(row, body):
+        await ha_client.broadcast_schedule_changed(token_id)
+        row = await db.get_token_by_id(token_id)
+    return _row_to_response(row)
+
+
+# A little over the logo cap, so an image at the limit with its multipart
+# framing still passes the early check and gets the clearer error below.
+_LOGO_UPLOAD_SLACK = 16 * 1024
+
+
+@router.post("/tokens/{token_id}/logo")
+async def upload_token_logo(
+    token_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    _: str = Depends(require_admin),
+) -> dict:
+    """Upload or replace a link's logo: a PNG or WebP, checked from its bytes.
+
+    Multipart rather than JSON, so the image is not inflated by base64. The
+    declared type and file name are ignored; see branding.inspect_logo.
+    """
+    row = await db.get_token_by_id(token_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if row["revoked"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the branding of a revoked token",
+        )
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > branding.LOGO_MAX_BYTES + _LOGO_UPLOAD_SLACK:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"The logo must be {branding.LOGO_MAX_BYTES // 1024} KB or smaller.",
+        )
+    data = await file.read(branding.LOGO_MAX_BYTES + 1)
+    try:
+        content_type, width, height = branding.inspect_logo(data)
+    except branding.LogoError as exc:
+        code = (
+            status.HTTP_413_CONTENT_TOO_LARGE
+            if len(data) > branding.LOGO_MAX_BYTES
+            else status.HTTP_422_UNPROCESSABLE_CONTENT
+        )
+        raise HTTPException(status_code=code, detail=str(exc))
+    if not await db.set_token_logo(token_id, content_type, data, width, height):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    await ha_client.broadcast_schedule_changed(token_id)
+    return _row_to_response(await db.get_token_by_id(token_id))
+
+
+@router.delete("/tokens/{token_id}/logo")
+async def delete_token_logo(token_id: str, _: str = Depends(require_admin)) -> dict:
+    """Remove a link's logo. Removing one that is not there is not an error."""
+    row = await db.get_token_by_id(token_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if row["revoked"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the branding of a revoked token",
+        )
+    if await db.delete_token_logo(token_id):
+        await ha_client.broadcast_schedule_changed(token_id)
+    return _row_to_response(await db.get_token_by_id(token_id))
 
 
 @router.patch("/tokens/{token_id}/entity-meta")
@@ -1046,6 +1185,22 @@ async def update_settings(
     if _guest_page_values() != before:
         await ha_client.broadcast_schedule_changed_all()
     return {"settings": settings_store.snapshot()}
+
+
+@router.post("/settings/theme-preview")
+async def preview_theme(
+    body: ThemePreviewRequest,
+    _: str = Depends(require_admin),
+) -> dict:
+    """Work out the palette for colours that are not saved yet.
+
+    The dashboard calls this as a colour is edited, to draw a light and a dark
+    sample and to show what a blank (automatic) colour currently resolves to.
+    Nothing is stored and no setting changes.
+    """
+    values = {name: getattr(settings, name) for name in THEME_FIELDS}
+    values.update({k: (v or "").upper() for k, v in body.model_dump(exclude_unset=True).items() if v is not None})
+    return theme.preview(brand_from_settings(SimpleNamespace(**values)))
 
 
 @router.delete("/settings/{key}")

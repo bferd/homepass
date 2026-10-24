@@ -53,6 +53,8 @@ async def test_read_lists_exactly_the_editable_keys(client, admin_session):
     data = resp.json()["settings"]
     assert set(data) == {
         "app_name", "contact_message", "welcome_text", "brand_bg", "brand_primary",
+        "brand_secondary", "brand_accent", "brand_surface", "brand_text",
+        "brand_dark_bg", "brand_dark_surface", "brand_dark_text",
         "guest_url", "access_log_retention_days", "phone_region",
     }
     assert data["app_name"] == {

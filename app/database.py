@@ -6,6 +6,7 @@ homelab scale with low concurrent users. For higher concurrency, consider
 connection pooling or switching to PostgreSQL.
 """
 import asyncio
+import hashlib
 import json
 import logging
 import time
@@ -107,6 +108,7 @@ async def create_token(
     info_text: str = "",
     info_text_in_footer: bool = False,
     group_headings: dict[str, dict[str, Any]] | None = None,
+    branding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     db = await get_db()
     token_id = str(uuid.uuid4())
@@ -124,12 +126,14 @@ async def create_token(
             """INSERT INTO tokens
                (id, slug, label, created_at, starts_at, expires_at, ip_allowlist, pin_hash,
                 access_windows, max_uses, remember_pin, device_binding, country_allowlist,
-                show_remaining_uses, info_text, info_text_in_footer, group_headings)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                show_remaining_uses, info_text, info_text_in_footer, group_headings,
+                branding)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (token_id, slug, label, now, starts_at, expires_at, ip_json, pin_hash,
              windows_json, max_uses, int(bool(remember_pin)), int(bool(device_binding)),
              country_json, int(bool(show_remaining_uses)), info_text,
-             int(bool(info_text_in_footer)), json.dumps(group_headings or {})),
+             int(bool(info_text_in_footer)), json.dumps(group_headings or {}),
+             json.dumps(branding or {}, separators=(",", ":"), ensure_ascii=False)),
         )
         if entity_ids:
             meta = entity_meta or {}
@@ -566,6 +570,123 @@ async def set_token_group_headings(
     await db.commit()
 
 
+# ---------------------------------------------------------------------------
+# Branding and logos
+# ---------------------------------------------------------------------------
+# tokens.branding is JSON (app/branding.py). Whether a link has a logo, and
+# which, is recorded in it as well as in token_logos, so a listing can say so
+# without joining image bytes. Both are changed in one transaction.
+
+def _branding_json(value: Any) -> dict[str, Any]:
+    try:
+        parsed = json.loads(value or "{}")
+    except (ValueError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _dump_branding(value: dict[str, Any]) -> str:
+    return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+
+
+async def set_token_branding(token_id: str, fields: dict[str, Any]) -> bool:
+    """Replace a link's branding text, size and colours. False if no such link.
+
+    The logo entry is carried over from what is stored, not from the caller, so
+    a save that raced a logo upload cannot bring back a logo that was just
+    replaced or removed.
+    """
+    db = await get_db()
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        async with db.execute("SELECT branding FROM tokens WHERE id = ?", (token_id,)) as cur:
+            row = await cur.fetchone()
+        if row is None:
+            await db.execute("ROLLBACK")
+            return False
+        merged = {k: v for k, v in fields.items() if k != "logo"}
+        logo = _branding_json(row[0]).get("logo")
+        if logo:
+            merged["logo"] = logo
+        await db.execute("UPDATE tokens SET branding = ? WHERE id = ?", (_dump_branding(merged), token_id))
+        await db.execute("COMMIT")
+    except Exception:
+        await db.execute("ROLLBACK")
+        raise
+    return True
+
+
+async def get_token_logo(token_id: str) -> aiosqlite.Row | None:
+    db = await get_db()
+    async with db.execute(
+        "SELECT content_type, data FROM token_logos WHERE token_id = ?", (token_id,)
+    ) as cur:
+        return await cur.fetchone()
+
+
+async def set_token_logo(
+    token_id: str, content_type: str, data: bytes, width: int, height: int
+) -> bool:
+    """Store or replace a link's logo. False if no such link."""
+    version = hashlib.sha256(data).hexdigest()[:12]
+    db = await get_db()
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        async with db.execute("SELECT branding FROM tokens WHERE id = ?", (token_id,)) as cur:
+            row = await cur.fetchone()
+        if row is None:
+            await db.execute("ROLLBACK")
+            return False
+        current = _branding_json(row[0])
+        current["logo"] = {"v": version, "width": width, "height": height}
+        await db.execute(
+            "INSERT OR REPLACE INTO token_logos "
+            "(token_id, content_type, data, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (token_id, content_type, data, width, height, int(time.time())),
+        )
+        await db.execute("UPDATE tokens SET branding = ? WHERE id = ?", (_dump_branding(current), token_id))
+        await db.execute("COMMIT")
+    except Exception:
+        await db.execute("ROLLBACK")
+        raise
+    return True
+
+
+async def delete_token_logo(token_id: str) -> bool:
+    """Remove a link's logo. True if it had one."""
+    db = await get_db()
+    await db.execute("BEGIN IMMEDIATE")
+    try:
+        async with db.execute("SELECT branding FROM tokens WHERE id = ?", (token_id,)) as cur:
+            row = await cur.fetchone()
+        if row is None:
+            await db.execute("ROLLBACK")
+            return False
+        current = _branding_json(row[0])
+        had = current.pop("logo", None) is not None
+        cur = await db.execute("DELETE FROM token_logos WHERE token_id = ?", (token_id,))
+        had = had or cur.rowcount > 0
+        await db.execute("UPDATE tokens SET branding = ? WHERE id = ?", (_dump_branding(current), token_id))
+        await db.execute("COMMIT")
+    except Exception:
+        await db.execute("ROLLBACK")
+        raise
+    return had
+
+
+async def copy_token_logo(source_id: str, target_id: str) -> bool:
+    """Give one link a copy of another's logo. False if the source has none."""
+    db = await get_db()
+    async with db.execute(
+        "SELECT content_type, data, width, height FROM token_logos WHERE token_id = ?",
+        (source_id,),
+    ) as cur:
+        row = await cur.fetchone()
+    if row is None:
+        return False
+    return await set_token_logo(target_id, row[0], bytes(row[1]), row[2], row[3])
+
+
 async def consume_token_use(token_id: str) -> bool:
     """Claim one use of a use-limited token. False if none is left.
 
@@ -656,6 +777,7 @@ async def delete_token(token_id: str) -> None:
     # Nullify access_log references before deleting to avoid FK constraint
     # failures on databases where the ON DELETE SET NULL clause is missing.
     await db.execute("UPDATE access_log SET token_id = NULL WHERE token_id = ?", (token_id,))
+    await db.execute("DELETE FROM token_logos WHERE token_id = ?", (token_id,))
     await db.execute("DELETE FROM tokens WHERE id = ?", (token_id,))
     await db.commit()
 

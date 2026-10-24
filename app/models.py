@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app import branding
 from app.region import valid_region
 
 NEVER_EXPIRES_SECONDS = 4102444800  # 2099-12-31T00:00:00Z
@@ -275,6 +276,49 @@ def clean_group_headings(value: Any) -> Any:
     return cleaned
 
 
+class BrandingInput(BaseModel):
+    """A link's branding as sent when creating one, or copied from another.
+
+    Every part is optional and blank shows nothing. ``colors`` is None while
+    the link uses the global colours; otherwise all nine colour settings, with
+    "" for Auto on the seven optional ones. The logo is a file, uploaded
+    separately (POST /admin/tokens/{id}/logo).
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    eyebrow: str = Field(default="", max_length=branding.EYEBROW_MAX)
+    title: str = Field(default="", max_length=branding.TITLE_MAX)
+    logo_height: int = Field(
+        default=branding.LOGO_HEIGHT_DEFAULT,
+        ge=branding.LOGO_HEIGHT_MIN, le=branding.LOGO_HEIGHT_MAX, strict=True,
+    )
+    colors: dict[str, str] | None = None
+
+    _clean_text = field_validator("eyebrow", "title", mode="before")(branding.clean_line)
+    _clean_colors = field_validator("colors", mode="before")(branding.clean_colors)
+
+
+class TokenBrandingRequest(BaseModel):
+    """Change a link's branding. A field left out keeps its stored value.
+
+    ``eyebrow`` and ``title`` may be "" to clear them. ``colors`` is the one
+    field where null means something: it puts the link back on the global
+    colours.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    eyebrow: str | None = Field(default=None, max_length=branding.EYEBROW_MAX)
+    title: str | None = Field(default=None, max_length=branding.TITLE_MAX)
+    logo_height: int | None = Field(
+        default=None,
+        ge=branding.LOGO_HEIGHT_MIN, le=branding.LOGO_HEIGHT_MAX, strict=True,
+    )
+    colors: dict[str, str] | None = None
+
+    _clean_text = field_validator("eyebrow", "title", mode="before")(branding.clean_line)
+    _clean_colors = field_validator("colors", mode="before")(branding.clean_colors)
+
+
 class TokenCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=200)
     slug: str | None = Field(default=None, pattern=r"^[a-z0-9_-]{1,64}$")
@@ -329,6 +373,11 @@ class TokenCreateRequest(BaseModel):
     # a section. None and {} both mean every heading as default. See
     # clean_group_headings.
     group_headings: dict[str, Any] | None = None
+    # Eyebrow, title, logo size and colours for the link's pages. None is
+    # unbranded. The logo image is uploaded after the link exists, or copied
+    # from another link with copy_logo_from (what Duplicate does).
+    branding: BrandingInput | None = None
+    copy_logo_from: str | None = Field(default=None, max_length=64)
 
     _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
     _clean_group_headings = field_validator("group_headings", mode="before")(
@@ -557,6 +606,8 @@ class ApiTokenUpdateRequest(BaseModel):
     info_text_in_footer: bool | None = None
     # Same as the dashboard's Section headings: None keeps, {} resets.
     group_headings: dict[str, Any] | None = None
+    # Same as the dashboard's Branding dialog; see TokenBrandingRequest.
+    branding: TokenBrandingRequest | None = None
 
     _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
     _clean_group_headings = field_validator("group_headings", mode="before")(
@@ -619,6 +670,23 @@ class ApiAccessCodeCreated(ApiAccessCode):
     code: str
 
 
+class ApiBrandingLogo(BaseModel):
+    """The uploaded logo. `version` changes when the image does; the guest
+    page serves it at /g/<slug>/logo?v=<version>."""
+    version: str
+    width: int
+    height: int
+
+
+class ApiBranding(BaseModel):
+    """A link's branding. `colors` is null while it uses the global colours."""
+    eyebrow: str = ""
+    title: str = ""
+    logo_height: int = branding.LOGO_HEIGHT_DEFAULT
+    colors: dict[str, str] | None = None
+    logo: ApiBrandingLogo | None = None
+
+
 class ApiTokenResponse(BaseModel):
     """A token as the API returns it. Same fields as the dashboard sees.
 
@@ -649,6 +717,7 @@ class ApiTokenResponse(BaseModel):
     # Only the headings the admin changed, keyed by group key; {} is all
     # defaults.
     group_headings: dict[str, ApiGroupHeading]
+    branding: ApiBranding = Field(default_factory=ApiBranding)
     country_allowlist: list[str] | None
     device_binding: bool
     device_bound_at: int | None
@@ -667,6 +736,8 @@ WELCOME_TEXT_MAX = INFO_TEXT_MAX
 GUEST_URL_MAX = 300
 RETENTION_DAYS_MAX = 3650
 HEX_COLOR_PATTERN = r"^#[0-9A-Fa-f]{6}$"
+# The optional colours also accept blank, which means "work it out".
+OPTIONAL_HEX_COLOR_PATTERN = r"^(#[0-9A-Fa-f]{6})?$"
 
 # A guest URL is a base that "/g/<slug>" is appended to, then copied into a
 # message to a guest and dropped into a JavaScript string on the dashboard. So
@@ -697,6 +768,34 @@ def normalise_guest_url(value: str) -> str:
     return value
 
 
+# The colour settings, required ones first. Shared by the settings save and the
+# dashboard's live preview so the two cannot drift apart.
+THEME_FIELDS = (
+    "brand_primary", "brand_bg",
+    "brand_secondary", "brand_accent", "brand_surface", "brand_text",
+    "brand_dark_bg", "brand_dark_surface", "brand_dark_text",
+)
+
+
+class ThemePreviewRequest(BaseModel):
+    """Colours to preview in the dashboard before they are saved.
+
+    A field left out keeps the colour now in effect; a blank optional one means
+    "work it out", the same as saving it blank. Nothing here is stored.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    brand_primary: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
+    brand_bg: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
+    brand_secondary: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_accent: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_bg: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+
+
 class SettingsUpdateRequest(BaseModel):
     """Overrides for the deployment settings an admin may change live.
 
@@ -716,6 +815,13 @@ class SettingsUpdateRequest(BaseModel):
     phone_region: str | None = None
     brand_bg: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
     brand_primary: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
+    brand_secondary: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_accent: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_bg: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
     guest_url: str | None = Field(default=None, max_length=GUEST_URL_MAX)
     # strict: JSON true would otherwise be accepted as 1 day.
     access_log_retention_days: int | None = Field(
@@ -749,7 +855,11 @@ class SettingsUpdateRequest(BaseModel):
             raise ValueError("must be a two-letter country code, such as CA")
         return value
 
-    @field_validator("brand_bg", "brand_primary")
+    @field_validator(
+        "brand_bg", "brand_primary", "brand_secondary", "brand_accent",
+        "brand_surface", "brand_text", "brand_dark_bg", "brand_dark_surface",
+        "brand_dark_text",
+    )
     @classmethod
     def _upper_hex(cls, value: str | None) -> str | None:
         # One spelling per colour, so #d9523c and the #D9523C default compare

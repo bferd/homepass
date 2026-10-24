@@ -29,6 +29,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app import branding
 from app import database as db
 from app import ha_client
 from app import schedule
@@ -52,6 +53,7 @@ from app.models import (
     ApiTokenRenewRequest,
     ApiTokenResponse,
     ApiTokenUpdateRequest,
+    BrandingInput,
     TokenDeviceBindingRequest,
     TokenRememberPinRequest,
     TokenScheduleRequest,
@@ -195,6 +197,11 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit the info text of a revoked token",
         )
+    if body.branding is not None and row["revoked"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot edit the branding of a revoked token",
+        )
     if body.group_headings is not None and row["revoked"]:
         # The dashboard saves the headings with the entities, so the same
         # refusal as its entity editor.
@@ -235,7 +242,8 @@ async def update_token(token_id: str, body: ApiTokenUpdateRequest) -> dict:
     if body.show_remaining_uses is not None:
         await db.set_show_remaining_uses(token_id, body.show_remaining_uses)
     headings_changed = await admin._set_group_headings_if_changed(row, body.group_headings)
-    if body.show_remaining_uses is not None or info_change or headings_changed:
+    branding_changed = await admin._set_branding_if_changed(row, body.branding)
+    if body.show_remaining_uses is not None or info_change or headings_changed or branding_changed:
         # Open guest pages draw the counter, the info text and the section
         # headings at load; reload them once, after every write, so the change
         # shows now, as it does after the dashboard's Schedule or Guest info.
@@ -407,6 +415,11 @@ async def duplicate_token(token_id: str, body: ApiTokenDuplicateRequest | None =
         info_text_in_footer=bool(row["info_text_in_footer"]),
         # Presentation of the same entities, so it travels with them.
         group_headings=db.group_headings_from_row(row["group_headings"]),
+        # Presentation of the link, so the copy keeps it, logo included.
+        branding=BrandingInput(**{
+            k: v for k, v in branding.from_row(row["branding"]).items() if k != "logo"
+        }),
+        copy_logo_from=token_id,
         country_allowlist=(
             json.loads(row["country_allowlist"]) if row["country_allowlist"] else None
         ),
