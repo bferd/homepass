@@ -28,6 +28,7 @@ from app import geoip
 from app import guest_pin
 from app.config import settings
 
+from tests.conftest import pin_in
 from tests.test_access_windows import _window_at
 from tests.test_picker_js import _run, node
 
@@ -246,7 +247,7 @@ async def test_api_create_accepts_and_returns_the_new_fields(client, api_on, moc
     assert body["remember_pin"] is False
     assert body["device_binding"] is True and body["device_bound_at"] is None
     assert body["country_allowlist"] is None
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)
     assert set(body["entity_meta"]["lock.front_door"]) >= {
         "require_proximity", "require_local_network"
     }

@@ -32,6 +32,8 @@ from app import database as db
 from app.config import Settings, settings
 from app.models import NEVER_EXPIRES_SECONDS
 
+from tests.conftest import pin_in
+
 KEY = "k" * 40
 HEADERS = {"X-API-Key": KEY}
 INGRESS_PREFIX = "/api/hassio_ingress/abc123"
@@ -251,7 +253,7 @@ async def test_create_with_pin_never_returns_it(client, mock_ha_client, test_db,
     resp = await client.post("/api/v1/tokens", json=_body(pin=PIN), headers=HEADERS)
     assert resp.status_code == 201
     assert resp.json()["has_pin"] is True
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)
 
 
 @pytest.mark.parametrize("overrides", [
@@ -346,7 +348,7 @@ async def test_patch_pin_absent_set_and_clear(client, mock_ha_client, test_db, a
 
     resp = await client.patch(url, json={"pin": PIN}, headers=HEADERS)
     assert resp.json()["has_pin"] is True
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)
 
     # Absent leaves it alone.
     resp = await client.patch(url, json={"label": "Other"}, headers=HEADERS)
@@ -523,7 +525,7 @@ async def test_duplicate_overrides(client, mock_ha_client, test_db, api_on):
     assert (copy["label"], copy["slug"], copy["has_pin"], copy["expires_at"]) == (
         "Next guest", "next-guest", True, expires_at,
     )
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)
 
 
 # ---------------------------------------------------------------------------
