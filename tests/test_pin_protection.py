@@ -19,6 +19,8 @@ from app.routers.guest import (
     PIN_ATTEMPT_LIMITS_PER_TOKEN,
 )
 
+from tests.conftest import pin_in
+
 PIN = "4821"
 WRONG_PIN = "1234"
 
@@ -183,7 +185,7 @@ async def test_manifest_stays_reachable_while_locked(client, pin_token, mock_ha_
     """
     resp = await client.get("/g/pin-token/manifest.json")
     assert resp.status_code == 200
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)
     assert resp.json()["start_url"] == "/g/pin-token"
 
 
@@ -461,8 +463,8 @@ async def test_pin_is_not_echoed_by_any_response(client, pin_token, mock_ha_clie
         await client.post("/g/pin-token/pin", data={"pin": PIN}),
         await client.get("/g/pin-token"),
     ):
-        assert PIN not in resp.text
-        assert WRONG_PIN not in resp.text
+        assert not pin_in(PIN, resp.text)
+        assert not pin_in(WRONG_PIN, resp.text)
 
 
 async def test_pin_is_stored_hashed_not_in_the_clear(test_db, pin_token):
@@ -491,7 +493,7 @@ async def test_create_token_with_pin_sets_has_pin(client, admin_session, mock_ha
     assert body["has_pin"] is True
     assert "pin" not in body
     assert "pin_hash" not in body
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)
 
     row = await db.get_token_by_id(body["id"])
     assert row["pin_hash"]
@@ -573,4 +575,4 @@ async def test_token_list_reports_has_pin_but_never_the_value(
     assert resp.status_code == 200
     entry = next(t for t in resp.json() if t["id"] == pin_token["id"])
     assert entry["has_pin"] is True
-    assert PIN not in resp.text
+    assert not pin_in(PIN, resp.text)

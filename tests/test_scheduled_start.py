@@ -332,11 +332,17 @@ async def test_a_start_beyond_the_sentinel_is_rejected(client, admin_session, mo
 # The boundary
 # ---------------------------------------------------------------------------
 
-async def test_the_token_works_once_the_start_time_passes(client, test_db, mock_ha_client):
-    """No admin action and no reissue — the clock alone opens the link."""
-    token = await _make_token("boundary", starts_in=1)
+async def test_the_token_works_once_the_start_time_passes(client, test_db, mock_ha_client, monkeypatch):
+    """No admin action and no reissue — the clock alone opens the link.
+
+    The clock is moved rather than slept past: starts_at is whole seconds, so a
+    one-second start could already have passed by the first request on a slow
+    runner.
+    """
+    token = await _make_token("boundary", starts_in=60)
     assert (await client.get(f"/g/{token['slug']}/state")).status_code == 403
-    await asyncio.sleep(1.2)
+    later = time.time() + 61
+    monkeypatch.setattr(time, "time", lambda: later)
     assert (await client.get(f"/g/{token['slug']}/state")).status_code == 200
 
 

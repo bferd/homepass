@@ -5,6 +5,7 @@ Environment variables MUST be set before any app imports because:
 - app.auth._hashed is computed at import time
 """
 import os
+import re
 import time
 
 # Set env vars before any app module is imported
@@ -60,6 +61,17 @@ async def _fake_camera_stream(entity_id: str):
 # A 100 m radius around an arbitrary point — tests derive nearby/far coordinates
 # from it rather than hardcoding a second pair.
 HOME_ZONE = {"latitude": 40.0, "longitude": -75.0, "radius": 100.0}
+
+
+def pin_in(pin: str, text: str) -> bool:
+    """Whether `pin` appears in `text` as a value of its own.
+
+    A plain substring check flakes: the token's uuid4 id has a third group that
+    always starts with 4, so a "4821" PIN is in about one id in 4096, and slugs,
+    nonces and timestamps can hold it too. A leaked PIN is bounded by quotes,
+    `=` or tags, never by the letters, digits, `-` or `_` of a random value.
+    """
+    return re.search(rf"(?<![0-9A-Za-z_-]){re.escape(pin)}(?![0-9A-Za-z_-])", text) is not None
 
 
 @pytest.fixture
