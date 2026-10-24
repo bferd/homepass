@@ -2425,7 +2425,13 @@ async function submitBranding() {
   }
   if (logoOp === 'upload') {
     const msg = await uploadBrandingLogo(tokenId, s.file);
-    if (msg) { err.textContent = msg; loadTokens(); return; }
+    if (msg) {
+      // The text and colours were saved quietly, so tell open guest pages now.
+      await fetch(`${BASE}/admin/tokens/${tokenId}/branding?force=true`, {
+        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: '{}',
+      });
+      err.textContent = msg; loadTokens(); return;
+    }
   } else if (logoOp === 'remove') {
     await fetch(`${BASE}/admin/tokens/${tokenId}/logo`, { method: 'DELETE' });
   }

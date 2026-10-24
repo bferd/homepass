@@ -250,15 +250,13 @@ In the [Public API](#public-api), `group_headings` is accepted on create and `PA
 
 ## Link branding
 
-Each link can carry its own header: a logo, a small line of text under the title (the eyebrow) and a title. All three are optional, and each one replaces the matching part of the guest page's pinned header: the logo replaces the person icon, the title the link's label and the eyebrow the app name. Anything left blank keeps the usual part. The header grows taller to fit. Set them in the create form or with the **Branding** button on a link's card.
+Each link can have its own logo, title and eyebrow text, all optional, set in the create form or with the **Branding** button on the link's card. In the guest page's pinned header the logo replaces the person icon, the title replaces the link's label and the eyebrow replaces the app name. Anything left blank keeps the usual part.
 
-- **Logo** is a PNG or WebP, not animated, 32 to 1024 px on each side and up to 512 KB. Any shape works, and one logo serves light and dark mode. The slider sets its height from 24 to 64 px; a wide logo is held to under half the header's width.
-- **Eyebrow** (40 characters) is shown exactly as typed. **Title** is 80. Each has a size slider: the title from 14 to 28 px (16 by default) and the eyebrow from 10 to 18 px (12 by default). The sizes apply to the pinned header only.
-- **Use global colours** is on by default. Turn it off to give the link its own Primary and Background plus the optional colours from **Settings**, with a light and dark sample as you edit.
+- **Logo:** PNG or WebP, not animated, 32 to 1024 px per side, up to 512 KB. A slider sets its height (24 to 64 px).
+- **Title and eyebrow:** up to 80 and 40 characters, shown as typed, each with a size slider.
+- **Use global colours:** on by default. Turn it off to give the link its own colours.
 
-The PIN, expired and revoked pages show the same logo, eyebrow and title, centred, and the installed app takes the link's title and colours. The device-lock pages and the screens shown to a blocked address stay plain, so a shared link preview reveals nothing. **Duplicate** copies the branding and logo.
-
-In the [Public API](#public-api), token responses and `PATCH /api/v1/tokens/{id}` carry `branding` (`eyebrow`, `title`, `logo_height`, `colors`, and `logo` size details). Logos are uploaded from the dashboard only.
+The PIN, expired and revoked pages show them centred. The device-lock and blocked-address pages stay plain. **Duplicate** copies the branding. In the [Public API](#public-api), tokens carry a `branding` field; logos can only be uploaded from the dashboard.
 
 ## Public API
 

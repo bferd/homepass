@@ -449,3 +449,15 @@ def test_stored_text_sizes_are_clamped_and_defaults_not_stored():
     out = branding.from_row('{"title_size": 99, "eyebrow_size": 1}')
     assert (out["title_size"], out["eyebrow_size"]) == (branding.TITLE_SIZE_MAX, branding.EYEBROW_SIZE_MIN)
     assert branding.stored({"title_size": 16, "eyebrow_size": 12}) == {}
+
+
+async def test_force_sends_the_notice_even_when_nothing_changed(client, admin_session, mock_ha_client):
+    t = await _make("force")
+    mock_ha_client["broadcast_schedule_changed"].reset_mock()
+    await client.patch(f"/admin/tokens/{t['id']}/branding", json={}, cookies=admin_session)
+    mock_ha_client["broadcast_schedule_changed"].assert_not_called()
+    await client.patch(f"/admin/tokens/{t['id']}/branding?force=true", json={}, cookies=admin_session)
+    mock_ha_client["broadcast_schedule_changed"].assert_called_once_with(t["id"])
+    mock_ha_client["broadcast_schedule_changed"].reset_mock()
+    await client.patch(f"/admin/tokens/{t['id']}/branding?force=true&notify=false", json={}, cookies=admin_session)
+    mock_ha_client["broadcast_schedule_changed"].assert_not_called()

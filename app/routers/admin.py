@@ -517,6 +517,7 @@ async def update_token_branding(
     token_id: str,
     body: TokenBrandingRequest,
     notify: bool = Query(default=True),
+    force: bool = Query(default=False),
     _: str = Depends(require_admin),
 ) -> dict:
     """Change a link's eyebrow, title, logo size or colours. A field left out
@@ -526,7 +527,8 @@ async def update_token_branding(
     A revoked token is refused, as the info edit is. Open guest tabs are told
     to reload so they show the change now, unless ``notify=false``: a save made
     of several calls (the dashboard's, with a logo) sends the notice on the last
-    one, so a page never reloads to a half-saved link.
+    one, so a page never reloads to a half-saved link. ``force=true`` sends the
+    notice even when nothing changed, for when that last call failed.
     """
     row = await db.get_token_by_id(token_id)
     if not row:
@@ -536,9 +538,10 @@ async def update_token_branding(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit the branding of a revoked token",
         )
-    if await _set_branding_if_changed(row, body):
-        if notify:
-            await ha_client.broadcast_schedule_changed(token_id)
+    changed = await _set_branding_if_changed(row, body)
+    if (changed or force) and notify:
+        await ha_client.broadcast_schedule_changed(token_id)
+    if changed:
         row = await db.get_token_by_id(token_id)
     return _row_to_response(row)
 

@@ -89,20 +89,27 @@ async def test_text_only_save_notifies_from_the_patch(client, admin_session, moc
     assert len(out) == 1 and out[0].endswith("/admin/tokens/tok3/branding")
 
 
-async def test_a_refused_logo_keeps_the_dialog_open_with_the_reason(client, admin_session, mock_ha_client):
+async def test_a_refused_logo_keeps_the_dialog_open_and_still_tells_guest_pages(client, admin_session, mock_ha_client):
     out = await _run(client, admin_session, """
-    globalThis.fetch = async (url, opts = {}) => (opts.method === 'POST'
-      ? { ok: false, json: async () => ({ detail: 'That file is not a PNG or WebP image.' }) }
-      : { ok: true, json: async () => ((opts.method || 'GET') === 'GET' ? [] : {}) });
+    const calls = [];
+    globalThis.fetch = async (url, opts = {}) => {
+      const method = opts.method || 'GET';
+      if (method !== 'GET') calls.push(method + ' ' + url);
+      return method === 'POST'
+        ? { ok: false, json: async () => ({ detail: 'That file is not a PNG or WebP image.' }) }
+        : { ok: true, json: async () => (method === 'GET' ? [] : {}) };
+    };
     const el = id => document.getElementById(id);
     el('br-eyebrow').value = ''; el('br-title').value = ''; el('br-height').value = '40'; el('br-global').checked = true;
     const s = emptyBranding(); s.file = { name: 'x.svg' };
     brandCtx = { mode: 'edit', tokenId: 't', state: s };
     await submitBranding();
-    console.log(JSON.stringify({ err: el('branding-error').textContent, open: brandCtx !== null }));
+    console.log(JSON.stringify({ err: el('branding-error').textContent, open: brandCtx !== null, calls }));
     """)
     assert out["err"] == "That file is not a PNG or WebP image."
     assert out["open"] is True
+    # The text went quietly, the upload failed, so the notice is sent by the last call.
+    assert out["calls"][-1].endswith("/admin/tokens/t/branding?force=true")
 
 
 async def test_create_mode_stages_without_calling_the_server(client, admin_session, mock_ha_client):
