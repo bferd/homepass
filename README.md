@@ -30,7 +30,7 @@ installs, just a link.
 - **Weekly access windows** — limit a link to recurring days and times (overnight windows supported), in Home Assistant's time zone
 - **Single-use links** — a link that stops after one (or N) guest commands; opening it or a chat-app preview never uses it up
 - **Link branding** — a logo, eyebrow, title and optional colors per link, so each guest, rental or project gets its own look
-- **Welcome and guest info text** — a welcome message on every guest page and a note per link (door code, parking), in a collapsible top card or a footer box, with simple formatting tags (bold, headings, lists, font colour) and web links, email addresses and phone numbers made tappable
+- **Welcome and guest info text** — a welcome message on every guest page and a note per link (door code, parking), in a collapsible top card or a footer box, with simple formatting tags (bold, headings, lists, font color) and web links, email addresses and phone numbers made tappable
 - **Optional PIN** — a 4–8 digit PIN on top of the link, enforced on every guest endpoint,
   with revocable links that skip it and a per-link choice of whether it is remembered
 - **Single-device lock** — optionally lock a link to the first browser that claims it; other devices are refused

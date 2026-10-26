@@ -256,7 +256,7 @@ Each link can have its own logo, title and eyebrow text, all optional, set in th
 - **Title and eyebrow:** up to 80 and 40 characters, shown as typed, each with a size slider.
 - **Use global colors:** on by default. Turn it off to give the link its own colors. A color left on Auto follows your global setting. Secondary and Accent are worked out from the link's own Primary instead when it differs from the global one, and Card, Text and the dark colors from its own Background when that differs.
 
-The PIN, expired and revoked pages show them centred. The device-lock and blocked-address pages stay plain. **Duplicate** copies the branding. In the [Public API](#public-api), tokens carry a `branding` field, and `POST` or `DELETE` on `/api/v1/tokens/{id}/logo` uploads (multipart, in a `file` field) or removes the logo.
+The PIN, expired and revoked pages show them centered. The device-lock and blocked-address pages stay plain. **Duplicate** copies the branding. In the [Public API](#public-api), tokens carry a `branding` field, and `POST` or `DELETE` on `/api/v1/tokens/{id}/logo` uploads (multipart, in a `file` field) or removes the logo.
 
 ## Public API
 
