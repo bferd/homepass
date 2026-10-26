@@ -196,7 +196,7 @@
            unset, and the row grows taller as they need. #}
         {% if branding and branding.logo_url %}
         <img src="{{ branding.logo_url }}" alt="" decoding="async"
-             style="width: {{ branding.logo_width }}px; max-width: 45%; aspect-ratio: {{ branding.logo_ratio }};"
+             style="width: {{ branding.logo_width }}px; max-width: {{ branding.logo_max_width }}%; aspect-ratio: {{ branding.logo_ratio }};"
              class="h-auto object-contain flex-shrink-0">
         {% else %}
         <div class="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">

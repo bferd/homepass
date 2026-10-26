@@ -3,9 +3,11 @@
 Real DB (migrated per test) and real routing; only ha_client is mocked. The
 logo checks run on bytes built here, so no image library is needed.
 """
+import json
 import struct
 import time
 import zlib
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -611,3 +613,72 @@ async def test_wrong_types_are_422_not_500(client, admin_session, body):
 def test_a_color_with_a_newline_in_it_is_refused():
     with pytest.raises(ValueError):
         branding.clean_colors({"brand_primary": "#112233", "brand_bg": "#ffffff", "brand_accent": "#aabbcc\nx"})
+
+
+# ---------------------------------------------------------------------------
+# Review follow-ups
+
+
+def test_a_stored_logo_with_a_zero_side_reads_as_unbranded():
+    good = {"v": "abcdef012345", "width": 64, "height": 32}
+    assert branding.from_row(json.dumps({"logo": good}))["logo"] == {"v": "abcdef012345", "width": 64, "height": 32}
+    for bad in ({**good, "height": 0}, {**good, "width": 0}, {**good, "height": -1}):
+        assert branding.from_row(json.dumps({"logo": bad}))["logo"] is None
+
+
+async def test_pin_page_uses_the_text_size_sliders(client, mock_ha_client):
+    from app import guest_pin
+    t = await _make("sized", pin_hash=await guest_pin.hash_pin("4821"))
+    await db.set_token_branding(t["id"], branding.stored({
+        "eyebrow": "Cottage", "title": "Welcome", "title_size": 20, "eyebrow_size": 14,
+    }))
+    html = (await client.get("/g/sized")).text
+    assert 'style="font-size: 40px"' in html
+    assert 'style="font-size: 14px" class="min-w-0' in html
+
+
+async def test_logo_width_cap_is_the_same_everywhere(client, mock_ha_client):
+    await _branded("cap")
+    html = (await client.get("/g/cap")).text
+    assert f"max-width: {branding.LOGO_MAX_WIDTH_PERCENT}%" in html and "45%" not in html
+    source = (Path(__file__).parent.parent / "templates" / "admin_dashboard.html").read_text()
+    assert f"BRAND_LOGO_MAX_PCT = {branding.LOGO_MAX_WIDTH_PERCENT};" in source
+
+
+def test_the_color_keys_have_one_source():
+    from app import models, theme
+    assert branding.COLOR_KEYS is theme.COLOR_KEYS and models.THEME_FIELDS is theme.COLOR_KEYS
+    assert theme.COLOR_KEYS == theme.REQUIRED_KEYS + theme.OPTIONAL_KEYS
+    assert set(theme.brand_from_colors({k: "" for k in theme.COLOR_KEYS}).__dict__) == {k[6:] for k in theme.COLOR_KEYS}
+
+
+LIMIT = branding.LOGO_MAX_BYTES + branding.LOGO_UPLOAD_SLACK
+MULTIPART = {"content-type": "multipart/form-data; boundary=x"}
+
+
+async def _chunks(total, size=32 * 1024):
+    # A real upload starts as a well-formed form part, so the parser keeps reading.
+    yield b'--x\r\nContent-Disposition: form-data; name="file"; filename="a.png"\r\nContent-Type: image/png\r\n\r\n'
+    sent = 0
+    while sent < total:
+        yield b"x" * min(size, total - sent)
+        sent += size
+
+
+@pytest.mark.parametrize("path", ["/admin/tokens/abc/logo", "/api/v1/tokens/abc/logo"])
+async def test_an_oversize_logo_upload_is_refused_before_it_is_read(client, path):
+    # No session and no API key: the size is checked before either is.
+    r = await client.post(path, content=b"x" * (LIMIT + 1), headers=MULTIPART)
+    assert r.status_code == 413 and "512 KB" in r.json()["detail"]
+    # A chunked body has no Content-Length to check, so it is counted as it arrives.
+    r = await client.post(path, content=_chunks(LIMIT + 64 * 1024), headers=MULTIPART)
+    assert r.status_code == 413 and "512 KB" in r.json()["detail"]
+
+
+async def test_the_upload_cap_leaves_other_requests_alone(client, admin_session):
+    big = b"x" * (LIMIT + 1)
+    # Not a logo upload: reaches the app, which answers for itself (here, no such link).
+    r = await client.post("/admin/tokens/abc/rotate-slug", content=big, cookies=admin_session)
+    assert r.status_code != 413
+    r = await client.get("/admin/tokens/abc/logo", cookies=admin_session)
+    assert r.status_code != 413

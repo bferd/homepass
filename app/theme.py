@@ -23,7 +23,9 @@ from functools import lru_cache
 DEFAULT_BG = "#F2F0E9"
 DEFAULT_PRIMARY = "#D9523C"
 
-# Every optional colour setting, in the order the dashboard lists them.
+# The colour settings: the two that are always set, then every optional one in
+# the order the dashboard lists them. The other modules import these.
+REQUIRED_KEYS = ("brand_primary", "brand_bg")
 OPTIONAL_KEYS = (
     "brand_secondary",
     "brand_accent",
@@ -33,6 +35,7 @@ OPTIONAL_KEYS = (
     "brand_dark_surface",
     "brand_dark_text",
 )
+COLOR_KEYS = REQUIRED_KEYS + OPTIONAL_KEYS
 
 RGB = tuple[int, int, int]
 
@@ -65,19 +68,14 @@ class Brand:
     dark_text: str = ""
 
 
+def brand_from_colors(colors) -> Brand:
+    """Build a Brand from a mapping of the colour settings by key."""
+    return Brand(**{key[len("brand_"):]: colors[key] for key in COLOR_KEYS})
+
+
 def brand_from_settings(s) -> Brand:
     """Build a Brand from the live settings object (or anything shaped like it)."""
-    return Brand(
-        bg=s.brand_bg,
-        primary=s.brand_primary,
-        secondary=s.brand_secondary,
-        accent=s.brand_accent,
-        surface=s.brand_surface,
-        text=s.brand_text,
-        dark_bg=s.brand_dark_bg,
-        dark_surface=s.brand_dark_surface,
-        dark_text=s.brand_dark_text,
-    )
+    return brand_from_colors({key: getattr(s, key) for key in COLOR_KEYS})
 
 
 # ── colour maths ──────────────────────────────────────────────────────────

@@ -2043,6 +2043,7 @@ const BRAND_H_MIN = 24, BRAND_H_MAX = 64, BRAND_H_DEFAULT = 40;
 const BRAND_TSIZE_MIN = 14, BRAND_TSIZE_MAX = 28, BRAND_TSIZE_DEFAULT = 16;
 const BRAND_ESIZE_MIN = 10, BRAND_ESIZE_MAX = 18, BRAND_ESIZE_DEFAULT = 12;
 const BRAND_LOGO_MAX_BYTES = 512 * 1024;
+const BRAND_LOGO_MAX_PCT = 50;
 const BRAND_COLOR_KEYS = [
   ['brand_primary', false], ['brand_secondary', true], ['brand_accent', true],
   ['brand_bg', false], ['brand_surface', true], ['brand_text', true],
@@ -2239,7 +2240,7 @@ function brandPanelHtml(mode, c, s) {
   // is not set keeps the page's usual one, shown here as a faded stand-in.
   const shownSrc = brandLogoSrc(s);
   const logo = shownSrc
-    ? `<img src="${esc(shownSrc)}" alt="" style="height:${h}px;max-width:45%" class="object-contain flex-shrink-0">`
+    ? `<img src="${esc(shownSrc)}" alt="" style="height:${h}px;max-width:${BRAND_LOGO_MAX_PCT}%" class="object-contain flex-shrink-0">`
     : (hasLogo
       ? `<span aria-hidden="true" class="material-symbols-outlined flex-shrink-0" style="font-size:${h}px;color:${muted}">image</span>`
       : `<span aria-hidden="true" class="flex-shrink-0 rounded-full" style="width:24px;height:24px;background:${accent}26"></span>`);

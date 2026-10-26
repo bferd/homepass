@@ -3,8 +3,9 @@
    typed, escaped by Jinja, and shown exactly as typed. The eyebrow takes the
    palette's accent colour and the title the text colour, so the link's own
    colours (or the global ones) apply without any colour of their own. Set
-   brand_center and brand_compact with {% with %} for the narrow, centred
-   screens (PIN, expired). #}
+   brand_center with {% with %} for the narrow, centered screens (PIN, expired). Sizes follow the link's sliders: the eyebrow as set,
+   the title at twice its size, because these screens' only heading is larger
+   than a header line. #}
 {% if branding %}
 <div class="brand-header{% if brand_center %} text-center{% endif %}">
   {% if branding.logo_url or branding.eyebrow %}
@@ -15,12 +16,12 @@
          class="h-auto object-contain flex-shrink-0">
     {% endif %}
     {% if branding.eyebrow %}
-    <div class="min-w-0 text-sm font-display font-medium tracking-wide text-accent break-words">{{ branding.eyebrow }}</div>
+    <div style="font-size: {{ branding.eyebrow_size }}px" class="min-w-0 font-display font-medium tracking-wide text-accent break-words">{{ branding.eyebrow }}</div>
     {% endif %}
   </div>
   {% endif %}
   {% if branding.title %}
-  <div role="heading" aria-level="2" class="{% if branding.logo_url or branding.eyebrow %}mt-3 {% endif %}{% if brand_compact %}text-3xl{% else %}text-4xl sm:text-5xl{% endif %} font-serif leading-tight break-words">{{ branding.title }}</div>
+  <div role="heading" aria-level="2" style="font-size: {{ branding.title_size * 2 }}px" class="{% if branding.logo_url or branding.eyebrow %}mt-3 {% endif %}font-serif leading-tight break-words">{{ branding.title }}</div>
   {% endif %}
 </div>
 {% endif %}

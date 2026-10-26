@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app import branding
+from app import branding, theme
 from app.region import valid_region
 
 NEVER_EXPIRES_SECONDS = 4102444800  # 2099-12-31T00:00:00Z
@@ -788,11 +788,7 @@ def normalise_guest_url(value: str) -> str:
 
 # The colour settings, required ones first. Shared by the settings save and the
 # dashboard's live preview so the two cannot drift apart.
-THEME_FIELDS = (
-    "brand_primary", "brand_bg",
-    "brand_secondary", "brand_accent", "brand_surface", "brand_text",
-    "brand_dark_bg", "brand_dark_surface", "brand_dark_text",
-)
+THEME_FIELDS = theme.COLOR_KEYS
 
 
 class ThemePreviewRequest(BaseModel):

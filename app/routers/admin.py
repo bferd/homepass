@@ -546,11 +546,6 @@ async def update_token_branding(
     return _row_to_response(row)
 
 
-# A little over the logo cap, so an image at the limit with its multipart
-# framing still passes the early check and gets the clearer error below.
-_LOGO_UPLOAD_SLACK = 16 * 1024
-
-
 @router.post("/tokens/{token_id}/logo")
 async def upload_token_logo(
     token_id: str,
@@ -573,7 +568,7 @@ async def upload_token_logo(
             detail="Cannot edit the branding of a revoked token",
         )
     declared = request.headers.get("content-length", "")
-    if declared.isdigit() and int(declared) > branding.LOGO_MAX_BYTES + _LOGO_UPLOAD_SLACK:
+    if declared.isdigit() and int(declared) > branding.LOGO_MAX_BYTES + branding.LOGO_UPLOAD_SLACK:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"The logo must be {branding.LOGO_MAX_BYTES // 1024} KB or smaller.",

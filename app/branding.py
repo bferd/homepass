@@ -23,6 +23,7 @@ import struct
 import unicodedata
 import zlib
 
+from app import theme
 from app.config import settings
 from app.theme import Brand, brand_theme
 
@@ -41,21 +42,14 @@ EYEBROW_SIZE_MIN, EYEBROW_SIZE_MAX, EYEBROW_SIZE_DEFAULT = 10, 18, 12
 LOGO_MAX_WIDTH_PERCENT = 50
 
 LOGO_MAX_BYTES = 512 * 1024
+# Room for the multipart framing around the file in an upload.
+LOGO_UPLOAD_SLACK = 16 * 1024
 LOGO_MIN_SIDE = 32
 LOGO_MAX_SIDE = 1024
 
-COLOR_KEYS = (
-    "brand_primary",
-    "brand_bg",
-    "brand_secondary",
-    "brand_accent",
-    "brand_surface",
-    "brand_text",
-    "brand_dark_bg",
-    "brand_dark_surface",
-    "brand_dark_text",
-)
-REQUIRED_COLOR_KEYS = ("brand_primary", "brand_bg")
+# One list of the color settings lives in app/theme.py.
+COLOR_KEYS = theme.COLOR_KEYS
+REQUIRED_COLOR_KEYS = theme.REQUIRED_KEYS
 
 _HEX = re.compile(r"#[0-9A-Fa-f]{6}")
 
@@ -161,7 +155,8 @@ def from_row(raw) -> dict:
     if not (
         isinstance(logo, dict)
         and isinstance(logo.get("v"), str) and re.fullmatch(r"[0-9a-f]{12}", logo["v"])
-        and isinstance(logo.get("width"), int) and isinstance(logo.get("height"), int)
+        and isinstance(logo.get("width"), int) and logo["width"] > 0
+        and isinstance(logo.get("height"), int) and logo["height"] > 0
     ):
         logo = None
     else:
@@ -221,17 +216,7 @@ def public(raw) -> dict:
 # ── what a guest page needs ───────────────────────────────────────────────
 
 def brand_from_colors(colors: dict) -> Brand:
-    return Brand(
-        bg=colors["brand_bg"],
-        primary=colors["brand_primary"],
-        secondary=colors["brand_secondary"],
-        accent=colors["brand_accent"],
-        surface=colors["brand_surface"],
-        text=colors["brand_text"],
-        dark_bg=colors["brand_dark_bg"],
-        dark_surface=colors["brand_dark_surface"],
-        dark_text=colors["brand_dark_text"],
-    )
+    return theme.brand_from_colors(colors)
 
 
 # Which of the link's own colours an Auto one follows. The two groups are kept

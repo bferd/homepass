@@ -12,8 +12,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app import branding
 from app import database as db
 from app import geoip
+from app.body_limit import LogoUploadLimit
 from app import ha_client
 from app import local_network
 from app import i18n
@@ -176,6 +178,13 @@ async def security_headers(request: Request, call_next):
     return response
 
 
+# Logo uploads are capped as the body arrives, before it is parsed and before
+# the admin or API key check, which run only after FastAPI has read a form.
+app.add_middleware(
+    LogoUploadLimit,
+    limit=branding.LOGO_MAX_BYTES + branding.LOGO_UPLOAD_SLACK,
+    message=f"The logo must be {branding.LOGO_MAX_BYTES // 1024} KB or smaller.",
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(admin.router)
 app.include_router(guest.router)
