@@ -142,20 +142,54 @@ def language_for(request: Request, audience: str) -> str:
     return admin_language(request) if audience == ADMIN else guest_language(request)
 
 
+# English spelled the way the reader's browser says they spell it. The
+# catalogue itself is American; a browser that asks for English with any other
+# region (en-CA, en-GB, en-AU ...) gets the few strings in
+# locales/<audience>/variants/en-GB.json laid over it, which hold the same
+# text with the British spelling Canada shares. Plain "en" and en-US keep the
+# American one. Only English has variants.
+ENGLISH_VARIANT = "en-GB"
+_AMERICAN_REGIONS = frozenset({"us"})
+
+
+def english_variant(request: Request) -> str:
+    """"en-GB" when the browser's first English range names a region other than
+    the United States, else "" (the American catalogue as it is)."""
+    for tag in parse_accept_language(request.headers.get("accept-language")):
+        primary, _, rest = tag.partition("-")
+        if primary != "en":
+            continue
+        region = next((p for p in rest.split("-") if len(p) == 2 and p.isalpha()), "")
+        return ENGLISH_VARIANT if region and region not in _AMERICAN_REGIONS else ""
+    return ""
+
+
 def _load(audience: str, lang: str) -> dict[str, str]:
     with open(LOCALES_DIR / audience / f"{lang}.json", encoding="utf-8") as fh:
         return json.load(fh)
 
 
+def _load_variant(audience: str, variant: str) -> dict[str, str]:
+    path = LOCALES_DIR / audience / "variants" / f"{variant}.json"
+    if not path.is_file():
+        return {}
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 @lru_cache(maxsize=None)
-def strings(audience: str, lang: str) -> dict[str, str]:
+def strings(audience: str, lang: str, variant: str = "") -> dict[str, str]:
     """Every string for one audience in one language, English filling any gap.
 
-    Cached per (audience, language): the files do not change while the app
-    runs, and the merged table is handed whole to each page's script.
+    Cached per (audience, language, variant): the files do not change while the
+    app runs, and the merged table is handed whole to each page's script. A
+    variant only applies to English, and only to keys English already has.
     """
     reference = _load(audience, DEFAULT_LANGUAGE)
     if lang == DEFAULT_LANGUAGE:
+        if variant:
+            overlay = _load_variant(audience, variant)
+            return {**reference, **{k: v for k, v in overlay.items() if k in reference}}
         return reference
     table = _load(audience, lang)
     missing = reference.keys() - table.keys()
@@ -202,10 +236,10 @@ SCRIPT_EXCLUDED_PREFIX = "page."
 
 
 @lru_cache(maxsize=None)
-def script_strings(audience: str, lang: str) -> dict[str, str]:
+def script_strings(audience: str, lang: str, variant: str = "") -> dict[str, str]:
     """The part of strings() a page's script can use."""
     return {
-        k: v for k, v in strings(audience, lang).items()
+        k: v for k, v in strings(audience, lang, variant).items()
         if not k.startswith(SCRIPT_EXCLUDED_PREFIX)
     }
 
@@ -216,13 +250,13 @@ def _substitute(text: str, params: dict, html: bool) -> str:
     return text
 
 
-def translator(audience: str, lang: str):
+def translator(audience: str, lang: str, variant: str = ""):
     """A ``t(key, **params)`` for templates, bound to one language.
 
     A key missing everywhere comes back as the key itself: visibly wrong on the
     page, which is what makes a typo get noticed.
     """
-    table = strings(audience, lang)
+    table = strings(audience, lang, variant)
 
     def t(key: str, **params):
         text = table.get(key, key)
@@ -240,10 +274,11 @@ def template_context(request: Request, audience: str) -> dict:
     page's script, emitted with tojson and read by tr() in static/util.js.
     """
     lang = language_for(request, audience)
+    variant = english_variant(request) if lang == DEFAULT_LANGUAGE else ""
     ctx = {
         "lang": lang,
-        "t": translator(audience, lang),
-        "i18n": {"lang": lang, "strings": script_strings(audience, lang)},
+        "t": translator(audience, lang, variant),
+        "i18n": {"lang": lang, "strings": script_strings(audience, lang, variant)},
     }
     if audience == ADMIN:
         ctx["admin_lang_pin"] = admin_language_pin(request)

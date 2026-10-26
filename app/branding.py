@@ -23,6 +23,7 @@ import struct
 import unicodedata
 import zlib
 
+from app.config import settings
 from app.theme import Brand, brand_theme
 
 EYEBROW_MAX = 40
@@ -227,10 +228,49 @@ def brand_from_colors(colors: dict) -> Brand:
     )
 
 
+# Which of the link's own colours an Auto one follows. The two groups are kept
+# apart on purpose: changing the Primary leaves the surfaces and text on the
+# global setting, and changing the Background leaves Secondary and Accent there.
+_AUTO_FOLLOWS_PRIMARY = ("brand_secondary", "brand_accent")
+_AUTO_FOLLOWS_BG = ("brand_surface", "brand_text", "brand_dark_bg", "brand_dark_surface", "brand_dark_text")
+
+
+def global_colors() -> dict:
+    """The global colour settings as they are right now."""
+    return {key: (getattr(settings, key, "") or "") for key in COLOR_KEYS}
+
+
+def effective_colors(colors: dict, global_values: dict | None = None) -> dict:
+    """The link's colours with each Auto settled.
+
+    An Auto colour follows the global setting for it, so a link that only
+    changes the Background keeps the Secondary and Accent chosen globally, and
+    one that only changes the Primary keeps the global Card, Text and dark
+    colours. An Auto colour is worked out from the link's own colours instead
+    once the one its group depends on differs from the global one: Primary for
+    Secondary and Accent, Background for the rest. An optional colour the global
+    settings also leave on Auto stays blank, and the palette works it out as
+    usual.
+    """
+    g = global_values if global_values is not None else global_colors()
+
+    def differs(key: str) -> bool:
+        return colors[key].strip().upper() != (g.get(key) or "").strip().upper()
+
+    out = dict(colors)
+    for keys, anchor in ((_AUTO_FOLLOWS_PRIMARY, "brand_primary"), (_AUTO_FOLLOWS_BG, "brand_bg")):
+        if differs(anchor):
+            continue
+        for key in keys:
+            if not out[key]:
+                out[key] = (g.get(key) or "").upper()
+    return out
+
+
 def link_brand(raw) -> Brand | None:
     """The link's own palette, or None while it uses the global colours."""
     colors = from_row(raw)["colors"]
-    return None if colors is None else brand_from_colors(colors)
+    return None if colors is None else brand_from_colors(effective_colors(colors))
 
 
 def page_context(row, base_path: str, slug: str) -> dict:
@@ -244,7 +284,7 @@ def page_context(row, base_path: str, slug: str) -> dict:
     b = from_row(row["branding"])
     ctx: dict = {"branding": None}
     if b["colors"] is not None:
-        css, dark = brand_theme(brand_from_colors(b["colors"]))
+        css, dark = brand_theme(brand_from_colors(effective_colors(b["colors"])))
         ctx.update(
             brand_css=css,
             brand_bg_dark=dark,

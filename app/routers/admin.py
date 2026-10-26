@@ -595,6 +595,29 @@ async def upload_token_logo(
     return _row_to_response(await db.get_token_by_id(token_id))
 
 
+@router.get("/tokens/{token_id}/logo")
+async def get_token_logo_image(token_id: str, _: str = Depends(require_admin)) -> Response:
+    """A link's logo, for the dashboard's own dialog and previews.
+
+    The guest route serves the same bytes behind the link's IP and country
+    gates; an admin looking at their own dashboard must not be turned away by
+    them, so this one is behind the admin login instead. ?v=<version> is only
+    there to change the URL when the logo does.
+    """
+    logo = await db.get_token_logo(token_id)
+    if logo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return Response(
+        content=bytes(logo["data"]),
+        media_type=logo["content_type"],
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Cache-Control": "private, max-age=31536000, immutable",
+        },
+    )
+
+
 @router.delete("/tokens/{token_id}/logo")
 async def delete_token_logo(
     token_id: str,
@@ -1203,6 +1226,7 @@ async def update_settings(
 @router.post("/settings/theme-preview")
 async def preview_theme(
     body: ThemePreviewRequest,
+    link: bool = False,
     _: str = Depends(require_admin),
 ) -> dict:
     """Work out the palette for colours that are not saved yet.
@@ -1210,9 +1234,19 @@ async def preview_theme(
     The dashboard calls this as a colour is edited, to draw a light and a dark
     sample and to show what a blank (automatic) colour currently resolves to.
     Nothing is stored and no setting changes.
+
+    With ``link=true`` the body is a link's own colours, and a blank one is
+    settled the way a guest page settles it (see branding.effective_colors):
+    it follows the global setting unless the link's primary (for Secondary and
+    Accent) or background (for the rest) differs. Without it, a blank colour is worked out from the body's own
+    colours, which is what the Settings dialog wants.
     """
     values = {name: getattr(settings, name) for name in THEME_FIELDS}
     values.update({k: (v or "").upper() for k, v in body.model_dump(exclude_unset=True).items() if v is not None})
+    if link:
+        sent = {k: (v or "").upper() for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+        own = {k: sent.get(k, values[k] if k in branding.REQUIRED_COLOR_KEYS else "") for k in branding.COLOR_KEYS}
+        values = branding.effective_colors(own)
     return theme.preview(brand_from_settings(SimpleNamespace(**values)))
 
 

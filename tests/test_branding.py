@@ -366,6 +366,55 @@ async def test_api_patch_branding_and_duplicate_copies_logo(client, api_on):
     assert dup.json()["branding"]["logo"]["width"] == 64
 
 
+async def test_api_uploads_a_logo_and_returns_the_token(client, api_on):
+    t = await _make("api3")
+    r = await client.post(f"/api/v1/tokens/{t['id']}/logo", headers=HEADERS, files={"file": ("l.png", png(64, 40), "image/png")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["id"] == t["id"] and body["entity_ids"] == ["light.living_room"]
+    assert (body["branding"]["logo"]["width"], body["branding"]["logo"]["height"]) == (64, 40)
+    assert (await db.get_token_logo(t["id"]))["content_type"] == "image/png"
+    swap = await client.post(f"/api/v1/tokens/{t['id']}/logo", headers=HEADERS, files={"file": ("l.webp", webp_lossless(120, 80), "x")})
+    assert swap.json()["branding"]["logo"]["width"] == 120
+    assert (await db.get_token_logo(t["id"]))["content_type"] == "image/webp"
+
+
+async def test_api_logo_upload_refusals(client, api_on):
+    t = await _make("api4")
+    url = f"/api/v1/tokens/{t['id']}/logo"
+    assert (await client.post(url, files={"file": ("l.png", png())})).status_code in (401, 403)       # no key
+    assert (await client.post("/api/v1/tokens/nope/logo", headers=HEADERS, files={"file": ("l.png", png())})).status_code == 404
+    assert (await client.post(url, headers=HEADERS, files={"file": ("l.png", b"not an image")})).status_code == 422
+    assert (await client.post(url, headers=HEADERS, files={"file": ("l.png", png(20, 20))})).status_code == 422
+    big = png(extra=_chunk(b"tEXt", b"x" * branding.LOGO_MAX_BYTES))
+    assert (await client.post(url, headers=HEADERS, files={"file": ("l.png", big)})).status_code == 413
+    assert (await client.post(url, headers=HEADERS)).status_code == 422                               # no file at all
+    assert await db.get_token_logo(t["id"]) is None
+    await db.revoke_token(t["id"])
+    assert (await client.post(url, headers=HEADERS, files={"file": ("l.png", png())})).status_code == 400
+
+
+async def test_api_deletes_a_logo_and_is_fine_when_there_is_none(client, api_on):
+    t = await _branded("api5")
+    url = f"/api/v1/tokens/{t['id']}/logo"
+    assert (await client.delete(url)).status_code in (401, 403)                                       # no key
+    r = await client.delete(url, headers=HEADERS)
+    assert r.status_code == 200, r.text
+    assert r.json()["branding"]["logo"] is None and r.json()["branding"]["title"] == "Welcome"
+    assert await db.get_token_logo(t["id"]) is None
+    assert (await client.delete(url, headers=HEADERS)).status_code == 200                             # already gone
+    assert (await client.delete("/api/v1/tokens/nope/logo", headers=HEADERS)).status_code == 404
+    await db.revoke_token(t["id"])
+    assert (await client.delete(url, headers=HEADERS)).status_code == 400
+
+
+async def test_api_docs_list_the_logo_upload(client, api_on):
+    spec = (await client.get("/api/openapi.json", headers=HEADERS)).json()
+    op = spec["paths"]["/api/v1/tokens/{token_id}/logo"]["post"]
+    assert "multipart/form-data" in op["requestBody"]["content"]
+    assert "delete" in spec["paths"]["/api/v1/tokens/{token_id}/logo"]
+
+
 # ---------------------------------------------------------------------------
 # Per-link palette
 # ---------------------------------------------------------------------------
@@ -375,6 +424,80 @@ def test_link_palette_is_derived_like_the_global_one():
     css, dark = branding.brand_theme(branding.brand_from_colors(colors))
     assert "--color-primary" in css and "--color-bg-dark" in css
     assert dark.startswith("#")
+
+
+GLOBAL = {
+    "brand_primary": "#D9523C", "brand_bg": "#F2F0E9",
+    "brand_secondary": "#112233", "brand_accent": "#223344",
+    "brand_surface": "#334455", "brand_text": "#445566",
+    "brand_dark_bg": "#556677", "brand_dark_surface": "#667788", "brand_dark_text": "#778899",
+}
+
+
+def _link(**own):
+    colors = {key: "" for key in branding.COLOR_KEYS}
+    colors.update(brand_primary=GLOBAL["brand_primary"], brand_bg=GLOBAL["brand_bg"])
+    colors.update(own)
+    return colors
+
+
+def test_auto_follows_the_global_colours_while_primary_and_background_match():
+    out = branding.effective_colors(_link(), GLOBAL)
+    assert {k: out[k] for k in branding.COLOR_KEYS} == {k: v.upper() for k, v in GLOBAL.items()}
+
+
+def test_a_different_primary_makes_only_secondary_and_accent_derive():
+    out = branding.effective_colors(_link(brand_primary="#0A7A5A"), GLOBAL)
+    assert out["brand_secondary"] == "" and out["brand_accent"] == ""
+    for key in branding.COLOR_KEYS[4:]:
+        assert out[key] == GLOBAL[key].upper(), key
+
+
+def test_a_different_background_makes_only_the_surfaces_and_text_derive():
+    out = branding.effective_colors(_link(brand_bg="#F4FBF8"), GLOBAL)
+    for key in branding.COLOR_KEYS[4:]:
+        assert out[key] == "", key
+    assert out["brand_secondary"] == GLOBAL["brand_secondary"].upper()
+    assert out["brand_accent"] == GLOBAL["brand_accent"].upper()
+
+
+def test_both_different_derive_everything_left_on_auto():
+    out = branding.effective_colors(_link(brand_primary="#0A7A5A", brand_bg="#F4FBF8"), GLOBAL)
+    assert all(out[key] == "" for key in branding.COLOR_KEYS[2:])
+
+
+def test_the_comparison_ignores_case_and_a_colour_the_link_sets_itself_is_kept():
+    out = branding.effective_colors(_link(brand_primary="#d9523c", brand_accent="#ABCDEF"), GLOBAL)
+    assert out["brand_accent"] == "#ABCDEF"
+    assert out["brand_secondary"] == GLOBAL["brand_secondary"].upper()
+
+
+def test_auto_stays_blank_where_the_global_colour_is_auto_too():
+    out = branding.effective_colors(_link(), dict(GLOBAL, brand_secondary="", brand_text=""))
+    assert out["brand_secondary"] == "" and out["brand_text"] == ""
+
+
+async def test_preview_in_link_mode_settles_auto_like_the_guest_page(client, admin_session):
+    body = {k: v for k, v in _link(brand_primary=settings.brand_primary).items()}
+    with patch.object(settings, "brand_secondary", "#112233"):
+        same = await client.post("/admin/settings/theme-preview?link=true", cookies=admin_session, json=body)
+        other = await client.post(
+            "/admin/settings/theme-preview?link=true", cookies=admin_session,
+            json=dict(body, brand_primary="#0A7A5A"),
+        )
+        plain = await client.post("/admin/settings/theme-preview", cookies=admin_session, json=body)
+    assert same.json()["resolved"]["brand_secondary"] == "#112233"
+    assert other.json()["resolved"]["brand_secondary"] != "#112233"
+    assert plain.json()["resolved"]["brand_secondary"] != "#112233"   # Settings keeps its own meaning
+
+
+async def test_guest_page_uses_the_global_secondary_when_only_the_primary_matches(client, mock_ha_client):
+    t = await _make("follow")
+    mine = branding.stored({"title": "T", "colors": _link(brand_primary=settings.brand_primary, brand_bg=settings.brand_bg)})
+    await db.set_token_branding(t["id"], mine)
+    with patch.object(settings, "brand_accent", "#00FF00"):
+        html = (await client.get("/g/follow")).text
+    assert "0 255 0" in html or "#00FF00" in html.upper() or "#00ff00" in html
 
 
 async def test_blocked_visitor_learns_nothing_of_the_branding(client, mock_ha_client):
@@ -461,3 +584,18 @@ async def test_force_sends_the_notice_even_when_nothing_changed(client, admin_se
     mock_ha_client["broadcast_schedule_changed"].reset_mock()
     await client.patch(f"/admin/tokens/{t['id']}/branding?force=true&notify=false", json={}, cookies=admin_session)
     mock_ha_client["broadcast_schedule_changed"].assert_not_called()
+
+
+async def test_admin_logo_image_is_served_safely(client, admin_session):
+    t = await _make()
+    assert (await client.get(f"/admin/tokens/{t['id']}/logo")).status_code in (401, 403)
+    assert (await client.get(f"/admin/tokens/{t['id']}/logo", cookies=admin_session)).status_code == 404
+    data = png(64, 48)
+    await _upload(client, admin_session, t["id"], data)
+    r = await client.get(f"/admin/tokens/{t['id']}/logo", cookies=admin_session)
+    assert r.status_code == 200 and r.content == data
+    assert r.headers["content-type"] == "image/png"
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in r.headers["content-security-policy"]
+    await client.delete(f"/admin/tokens/{t['id']}/logo", cookies=admin_session)
+    assert (await client.get(f"/admin/tokens/{t['id']}/logo", cookies=admin_session)).status_code == 404

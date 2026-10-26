@@ -379,6 +379,7 @@
   "settings.empty": "vacío",
   "settings.revert": "Revertir",
   "settings.overriding": "Sustituye a la opción del complemento ({option}).",
+  "settings.default_color": "Predeterminado: {color}.",
   "settings.err_whole": "{label} debe ser un número entero.",
   "settings.save_error": "Error al guardar los ajustes.",
   "settings.load_failed": "No se pudieron cargar los ajustes",

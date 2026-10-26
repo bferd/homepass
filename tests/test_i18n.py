@@ -389,6 +389,34 @@ async def test_dashboard_is_english_for_any_other_language(client, admin_session
     assert "Create Token" in resp.text
 
 
+@pytest.mark.parametrize("header, variant", [
+    (None, ""), ("en", ""), ("en-US,en;q=0.9", ""), ("es-MX,es;q=0.9", ""), ("de", ""),
+    ("en-CA,en;q=0.9", "en-GB"), ("en-GB", "en-GB"), ("en-AU,en-US;q=0.5", "en-GB"),
+    ("fr-CA,en-CA;q=0.8", "en-GB"), ("en-latn-gb", "en-GB"),
+])
+def test_english_variant_comes_from_the_browser_region(header, variant):
+    request = type("R", (), {"headers": {"accept-language": header} if header else {}})()
+    assert i18n.english_variant(request) == variant
+
+
+def test_the_british_overlay_only_restates_keys_english_has():
+    en = _load("admin", "en")
+    overlay = json.loads((LOCALES / "admin" / "variants" / "en-GB.json").read_text(encoding="utf-8"))
+    assert overlay and set(overlay) <= set(en)
+    for key, text in overlay.items():
+        assert "colour" in text.lower() and "colour" not in en[key].lower(), key
+        assert en[key] == text.replace("colour", "color").replace("Colour", "Color"), key
+
+
+async def test_dashboard_spells_color_for_the_reader(client, admin_session, mock_ha_client):
+    us = await client.get("/admin/dashboard", cookies=admin_session, headers={"Accept-Language": "en-US"})
+    ca = await client.get("/admin/dashboard", cookies=admin_session, headers={"Accept-Language": "en-CA"})
+    assert _embedded_catalogue(us.text)["strings"]["settings.brand_primary"] == "Primary color"
+    assert _embedded_catalogue(ca.text)["strings"]["settings.brand_primary"] == "Primary colour"
+    assert "Use global colors" in us.text or "Use global color" in us.text
+    assert "colour" not in _embedded_catalogue(us.text)["strings"]["branding.use_global"]
+
+
 async def test_pinned_language_beats_the_browser(client, admin_session, mock_ha_client):
     cookies = {**admin_session, i18n.ADMIN_LANG_COOKIE: "es"}
     resp = await client.get("/admin/dashboard", cookies=cookies, headers={"Accept-Language": "en-GB"})

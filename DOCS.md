@@ -52,7 +52,7 @@ These are the only add-on options. Everything else is set per link, in the dashb
 
 ### Changing settings from the dashboard
 
-The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, the colours and how many days of activity to keep. The colours section draws a light and a dark sample as you change them, shows what each blank colour currently works out to, and warns when text would be hard to read. Tick **Auto** on an optional colour to go back to the worked-out one. Changes apply straight away, with no restart.
+The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, the colors and how many days of activity to keep. The colors section draws a light and a dark sample as you change them, shows what each blank color currently works out to, and warns when text would be hard to read. Tick **Auto** on an optional color to go back to the worked-out one. Changes apply straight away, with no restart.
 
 Two settings are only in the dashboard, not in the add-on options:
 
@@ -254,9 +254,9 @@ Each link can have its own logo, title and eyebrow text, all optional, set in th
 
 - **Logo:** PNG or WebP, not animated, 32 to 1024 px per side, up to 512 KB. A slider sets its height (24 to 64 px).
 - **Title and eyebrow:** up to 80 and 40 characters, shown as typed, each with a size slider.
-- **Use global colours:** on by default. Turn it off to give the link its own colours.
+- **Use global colors:** on by default. Turn it off to give the link its own colors. A color left on Auto follows your global setting. Secondary and Accent are worked out from the link's own Primary instead when it differs from the global one, and Card, Text and the dark colors from its own Background when that differs.
 
-The PIN, expired and revoked pages show them centred. The device-lock and blocked-address pages stay plain. **Duplicate** copies the branding. In the [Public API](#public-api), tokens carry a `branding` field; logos can only be uploaded from the dashboard.
+The PIN, expired and revoked pages show them centred. The device-lock and blocked-address pages stay plain. **Duplicate** copies the branding. In the [Public API](#public-api), tokens carry a `branding` field, and `POST` or `DELETE` on `/api/v1/tokens/{id}/logo` uploads (multipart, in a `file` field) or removes the logo.
 
 ## Public API
 
@@ -269,12 +269,13 @@ Send the token in the `X-API-Key` header on every request. A dashboard login doe
 | `GET` | `/api/v1/tokens` | List tokens |
 | `POST` | `/api/v1/tokens` | Create a token |
 | `GET` | `/api/v1/tokens/{id}` | One token, with entities and per-entity options |
-| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter, the guest info text, the section headings or the branding text and colours |
+| `PATCH` | `/api/v1/tokens/{id}` | Change label, entities, expiry, PIN, remember-PIN, the device lock, the remaining-uses counter, the guest info text, the section headings or the branding text and colors |
 | `PUT` | `/api/v1/tokens/{id}/schedule` | Replace start, end, weekly times and use limit |
 | `POST` | `/api/v1/tokens/{id}/unbind` | Release a device lock's claim |
 | `GET` / `POST` | `/api/v1/tokens/{id}/access-codes` | List or make links without PIN (a new code is shown once) |
 | `POST` / `DELETE` | `/api/v1/tokens/{id}/access-codes/{code_id}[/rotate]` | Rotate or revoke one link without PIN |
 | `DELETE` | `/api/v1/tokens/{id}` | Delete a token and its history |
+| `POST` / `DELETE` | `/api/v1/tokens/{id}/logo` | Upload (multipart `file`, PNG or WebP) or remove the link's logo |
 | `POST` | `/api/v1/tokens/{id}/revoke` | Revoke |
 | `POST` | `/api/v1/tokens/{id}/renew` | New expiry, and un-revoke |
 | `POST` | `/api/v1/tokens/{id}/activate` | Start a scheduled token now |

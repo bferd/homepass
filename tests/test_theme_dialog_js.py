@@ -49,7 +49,8 @@ async def test_colour_section_groups_the_fields_and_marks_blank_ones_auto(client
     """)
     assert out["preview"] and out["warnings"]
     assert out["titles"] == [True, True, True]
-    assert out["secondaryDisabled"] and out["secondaryAuto"]
+    # An Auto swatch is not disabled: clicking it opens the picker.
+    assert not out["secondaryDisabled"] and out["secondaryAuto"]
     assert not out["accentDisabled"] and not out["accentAuto"] and out["accentValue"]
     # The two required colours cannot be blank, so they get no Auto.
     assert not out["primaryHasAuto"] and not out["bgHasAuto"]
@@ -165,3 +166,64 @@ async def test_a_slow_reply_to_an_older_edit_does_not_overwrite_a_newer_sample(c
     console.log(JSON.stringify({ html: document.getElementById('theme-preview').innerHTML }));
     """)
     assert "#222222" in out["html"] and "#111111" not in out["html"]
+
+
+async def test_colors_show_a_faint_default_instead_of_the_add_on_note(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, _SEED + """
+    settingsState.brand_primary = colour('#2D6A4F', '#D9523C', true);
+    settingsState.brand_bg = colour('#101010', '#F2F0E9', true);
+    settingsState.app_name = colour('Mine', 'Home Access', true);
+    renderSettings();
+    const html = document.getElementById('settings-fields').innerHTML;
+    console.log(JSON.stringify({
+      overriding: (html.match(/Overriding the add-on option/g) || []).length,
+      defaults: html.match(/Default #[0-9A-F]{6}\\./g),
+    }));
+    """)
+    # Only the app name, which is not a colour, still names its add-on option.
+    assert out["overriding"] == 1
+    assert out["defaults"] == ["Default #D9523C.", "Default #F2F0E9."]
+
+
+async def test_reverting_an_optional_colour_only_moves_the_field(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, _SEED + """
+    const keys = ['secondary', 'accent', 'surface', 'text', 'dark_bg', 'dark_surface', 'dark_text'].map(k => 'brand_' + k);
+    for (const k of keys) settingsState[k] = colour('#445566', '', true);
+    const calls = [];
+    globalThis.fetch = async (url, opts) => { calls.push((opts && opts.method) || 'GET'); return { ok: false }; };
+    renderSettings();
+    const el = id => document.getElementById(id);
+    const html = el('settings-fields').innerHTML;
+    const result = {};
+    calls.length = 0;
+    for (const k of keys) {
+      const button = html.match(new RegExp('<button[^>]*data-key="' + k + '"[^>]*>'))[0];
+      resetSettingColor(k);
+      result[k] = { local: button.includes('data-action="reset-color"'), auto: el('set-' + k + '-auto').checked,
+        collected: collectSettings()[k] };
+    }
+    console.log(JSON.stringify({ result, deletes: calls.filter(m => m === 'DELETE').length }));
+    """)
+    # Every optional colour's Revert is the dialog-only one, not DELETE-and-reload,
+    # and Save is what stores the hand-back to Auto.
+    assert len(out["result"]) == 7
+    for key, row in out["result"].items():
+        assert row == {"local": True, "auto": True, "collected": ""}, key
+    assert out["deletes"] == 0
+
+
+async def test_picking_a_colour_in_settings_takes_the_field_off_auto(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, _SEED + """
+    renderSettings();
+    const el = id => document.getElementById(id);
+    const seen = [];
+    el('set-brand_secondary-label').classList = { remove: c => seen.push(c) };   // the stub's classList does nothing
+    el('set-brand_secondary-auto').checked = true;       // the stub does not read the attribute
+    el('set-brand_secondary').value = '#112233';
+    onColorEvent({ target: { id: 'set-brand_secondary', type: 'color', dataset: {} } });
+    console.log(JSON.stringify({ auto: el('set-brand_secondary-auto').checked, seen,
+      collected: collectSettings().brand_secondary }));
+    """)
+    assert out["auto"] is False
+    assert out["seen"] == ["opacity-50"]
+    assert out["collected"] == "#112233"

@@ -1,0 +1,18 @@
+{
+  "page.entity.show_color": "Show colour controls",
+  "page.entity.show_color_hint": "Also off by default. The guest gets a colour wheel, a warm-cool slider, or both — whichever Home Assistant reports the light supports.",
+  "picker.color_shown": "Colour controls shown",
+  "settings.brand_primary": "Primary colour",
+  "settings.brand_bg": "Background colour",
+  "settings.colors_title": "Colours",
+  "settings.colors_hint": "Optional colours are worked out from the others while they are on Auto. The samples show light and dark mode as you edit.",
+  "settings.brand_secondary": "Secondary colour",
+  "settings.brand_accent": "Accent colour",
+  "settings.brand_surface": "Card colour",
+  "settings.brand_text": "Text colour",
+  "settings.brand_dark_surface": "Dark card colour",
+  "settings.brand_dark_text": "Dark text colour",
+  "settings.warn_button": "Button text is hard to read on the primary colour.",
+  "branding.sum_colors": "Own colours",
+  "branding.use_global": "Use global colours"
+}

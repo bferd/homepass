@@ -201,3 +201,40 @@ async def test_link_revert_works_when_the_link_has_its_own_colours(client, admin
     console.log(JSON.stringify({ bg: el('br-c-brand_bg').value }));
     """)
     assert out == {"bg": "#f2f0e9"}
+
+
+async def test_picking_a_colour_in_a_link_takes_the_field_off_auto(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    brandCtx = { state: Object.assign(emptyBranding(), { useGlobal: false }) };
+    document.getElementById('branding-body').innerHTML = brandingFormHtml(brandCtx.state);
+    scheduleBrandPreview = () => {};
+    const el = id => document.getElementById(id);
+    const seen = [];
+    el('br-l-brand_accent').classList = { remove: c => seen.push(c) };           // the stub's classList does nothing
+    el('br-a-brand_accent').checked = true;               // the stub does not read the attribute
+    const disabled = /id="br-c-brand_accent"[^>]*disabled/.test(document.getElementById('branding-body').innerHTML);
+    el('br-c-brand_accent').value = '#112233';
+    onBrandEvent({ type: 'input', target: { id: 'br-c-brand_accent', type: 'color', dataset: {}, closest: () => true } });
+    console.log(JSON.stringify({ disabled, auto: el('br-a-brand_accent').checked, seen,
+      read: readBrandingForm().colors.brand_accent }));
+    """)
+    assert out["disabled"] is False                        # an Auto swatch can be clicked
+    assert out["auto"] is False and out["seen"] == ["opacity-50"]
+    assert out["read"] == "#112233"
+
+
+async def test_current_logo_is_shown_in_the_dialog(client, admin_session, mock_ha_client):
+    out = await _run(client, admin_session, """
+    const tok = { id: 'abc', branding: { eyebrow: '', title: '', logo_height: 40, colors: null,
+      logo: { version: 'v1', width: 64, height: 32 } } };
+    const own = brandingFromToken(tok, null);
+    const dup = brandingFromToken(tok, 'src id');
+    const none = brandingFromToken({ id: 'x', branding: { eyebrow: '', title: '', logo_height: 40, colors: null, logo: null } }, null);
+    const picked = emptyBranding(); picked.fileUrl = 'data:image/png;base64,AAAA'; picked.logoUrl = '/old';
+    console.log(JSON.stringify({ own: brandLogoSrc(own), dup: brandLogoSrc(dup), none: brandLogoSrc(none),
+      picked: brandLogoSrc(picked) }));
+    """)
+    assert out["own"].endswith("/admin/tokens/abc/logo?v=v1")
+    assert "/admin/tokens/src%20id/logo?v=v1" in out["dup"]
+    assert not out["none"]
+    assert out["picked"].startswith("data:image/png")

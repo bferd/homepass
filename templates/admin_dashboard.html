@@ -983,7 +983,7 @@ function renderTokens() {
             <span aria-hidden="true" class="material-symbols-outlined text-sm">block</span> ${esc(tr('action.revoke'))}
           </button>
         </div>
-        <div class="grid grid-cols-2 gap-2 mt-2">
+        <div class="grid grid-cols-3 gap-2 mt-2">
           <button data-id="${esc(t.id)}" data-action="open-schedule-modal"
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors" title="${esc(tr('action.schedule_title'))}">
             <span aria-hidden="true" class="material-symbols-outlined text-sm">edit_calendar</span> ${esc(tr('action.schedule'))}
@@ -992,6 +992,12 @@ function renderTokens() {
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${t.info_text ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
             <span aria-hidden="true" class="material-symbols-outlined text-sm">info</span> ${esc(tr('action.info'))}
           </button>
+          <button data-id="${esc(t.id)}" data-action="open-branding-modal"
+            class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${hasBranding(t) ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
+            <span aria-hidden="true" class="material-symbols-outlined text-sm">palette</span> ${esc(tr('action.branding'))}
+          </button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mt-2">
           <button data-id="${esc(t.id)}" data-action="confirm-rotate"
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors" title="${esc(tr('action.rotate_title'))}">
             <span aria-hidden="true" class="material-symbols-outlined text-sm">autorenew</span> ${esc(tr('action.rotate'))}
@@ -999,10 +1005,6 @@ function renderTokens() {
           <button data-id="${esc(t.id)}" data-label="${esc(t.label)}" data-action="open-pin-modal"
             class="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${t.has_pin ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
             <span aria-hidden="true" class="material-symbols-outlined text-sm">${t.has_pin ? 'lock' : 'lock_open'}</span> ${esc(t.has_pin ? tr('action.pin_protected') : tr('action.add_pin'))}
-          </button>
-          <button data-id="${esc(t.id)}" data-action="open-branding-modal"
-            class="col-span-2 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-display font-medium border transition-colors ${hasBranding(t) ? 'border-ink/30 text-ink bg-ink/10 hover:bg-ink/20' : 'border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5'}">
-            <span aria-hidden="true" class="material-symbols-outlined text-sm">palette</span> ${esc(tr('action.branding'))}
           </button>
         </div>
         ${t.has_pin ? `<div class="grid grid-cols-2 gap-2 mt-2">
@@ -2055,7 +2057,7 @@ let brandPreviewSeq = 0;
 function emptyBranding() {
   return { eyebrow: '', title: '', height: BRAND_H_DEFAULT, titleSize: BRAND_TSIZE_DEFAULT,
     eyebrowSize: BRAND_ESIZE_DEFAULT, useGlobal: true, colors: {},
-    file: null, fileUrl: null, hasLogo: false, logoSize: '', removeLogo: false, copyFrom: null };
+    file: null, fileUrl: null, hasLogo: false, logoUrl: '', logoSize: '', removeLogo: false, copyFrom: null };
 }
 
 function brandingFromToken(t, copyFrom) {
@@ -2068,7 +2070,14 @@ function brandingFromToken(t, copyFrom) {
   s.eyebrowSize = b.eyebrow_size || BRAND_ESIZE_DEFAULT;
   s.useGlobal = !b.colors;
   s.colors = Object.assign({}, b.colors || {});
-  if (b.logo) { s.hasLogo = true; s.logoSize = `${b.logo.width} x ${b.logo.height}`; }
+  if (b.logo) {
+    s.hasLogo = true;
+    s.logoSize = `${b.logo.width} x ${b.logo.height}`;
+    // The dashboard's own copy of the image (behind the admin login, not the
+    // link's gates). A duplicate shows the logo of the link it copies.
+    const logoId = copyFrom || (t && t.id);
+    if (logoId) s.logoUrl = `${BASE}/admin/tokens/${encodeURIComponent(logoId)}/logo?v=${encodeURIComponent(b.logo.version || '')}`;
+  }
   s.copyFrom = copyFrom || null;
   return s;
 }
@@ -2103,6 +2112,31 @@ function brandColorLabel(key) {
   return f ? f.label : key;
 }
 
+// The image to show for the logo the dialog holds: a file just chosen (read as
+// a data: URL, which the page's security policy allows and blob: it does not),
+// else the one the link already has, else none.
+function brandLogoSrc(s) {
+  if (s.fileUrl) return s.fileUrl;
+  return s.hasLogo && !s.removeLogo ? (s.logoUrl || '') : '';
+}
+
+function fileToDataUrl(file) {
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = () => resolve(typeof r.result === 'string' ? r.result : null);
+    r.onerror = () => resolve(null);
+    r.readAsDataURL(file);
+  });
+}
+
+function refreshBrandLogoThumb() {
+  const img = document.getElementById('br-logo-thumb');
+  if (!img || !brandCtx) return;
+  const src = brandLogoSrc(brandCtx.state);
+  if (src) img.src = src; else img.removeAttribute('src');
+  img.classList.toggle('hidden', !src);
+}
+
 function brandingFormHtml(s) {
   const input = 'w-full px-3 py-2.5 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20';
   const lab = 'block text-xs font-mono uppercase tracking-wider text-muted mb-1.5';
@@ -2112,7 +2146,7 @@ function brandingFormHtml(s) {
     const auto = optional && !v;
     const shown = v || brandGlobal[key] || '#808080';
     return `<div class="flex items-center gap-3">
-      <input id="br-c-${key}" data-brand-color="${key}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} aria-label="${esc(brandColorLabel(key))}"
+      <input id="br-c-${key}" data-brand-color="${key}" type="color" value="${esc(shown.toLowerCase())}" aria-label="${esc(brandColorLabel(key))}"
         class="w-12 h-9 p-1 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">
       <span id="br-l-${key}" class="text-sm flex-1 min-w-0 truncate${auto ? ' opacity-50' : ''}">${esc(brandColorLabel(key))}</span>
       ${optional ? '' : `<button type="button" data-action="reset-brand-color" data-key="${key}" class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline"><span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}</button>`}
@@ -2139,6 +2173,7 @@ function brandingFormHtml(s) {
         <label for="br-file" class="px-3 py-1.5 text-xs rounded-lg border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 cursor-pointer flex-shrink-0 focus-within:ring-2 focus-within:ring-primary/30">${esc(tr('branding.choose_file'))}
           <input id="br-file" type="file" accept="image/png,image/webp" class="sr-only">
         </label>
+        <img id="br-logo-thumb" alt="" src="${esc(brandLogoSrc(s))}" class="h-9 w-9 object-contain rounded-lg border border-border-light dark:border-border-dark bg-white/5 flex-shrink-0${brandLogoSrc(s) ? '' : ' hidden'}">
         <span id="br-file-name" class="text-xs text-muted flex-1 min-w-0 truncate">${esc(logoNote)}</span>
         ${logoShown ? `<button type="button" data-action="remove-brand-logo" class="px-2.5 py-1.5 text-xs rounded-lg border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5">${esc(tr('branding.logo_remove'))}</button>` : ''}
       </div>
@@ -2202,8 +2237,9 @@ function brandPanelHtml(mode, c, s) {
   const hasLogo = s.fileUrl || (s.hasLogo && !s.removeLogo);
   // The guest page's pinned header: logo, then title over eyebrow. A part that
   // is not set keeps the page's usual one, shown here as a faded stand-in.
-  const logo = s.fileUrl
-    ? `<img src="${esc(s.fileUrl)}" alt="" style="height:${h}px;max-width:45%" class="object-contain flex-shrink-0">`
+  const shownSrc = brandLogoSrc(s);
+  const logo = shownSrc
+    ? `<img src="${esc(shownSrc)}" alt="" style="height:${h}px;max-width:45%" class="object-contain flex-shrink-0">`
     : (hasLogo
       ? `<span aria-hidden="true" class="material-symbols-outlined flex-shrink-0" style="font-size:${h}px;color:${muted}">image</span>`
       : `<span aria-hidden="true" class="flex-shrink-0 rounded-full" style="width:24px;height:24px;background:${accent}26"></span>`);
@@ -2231,7 +2267,10 @@ async function runBrandPreview() {
   if (!s.useGlobal) Object.assign(values, s.colors);
   const seq = ++brandPreviewSeq;
   try {
-    const r = await fetch(`${BASE}/admin/settings/theme-preview`, {
+    // A link's own colours are settled the way its guest page settles them: a
+    // blank one follows the global setting unless the link's primary (for
+    // Secondary and Accent) or background (for the rest) differs (?link=true).
+    const r = await fetch(`${BASE}/admin/settings/theme-preview${s.useGlobal ? '' : '?link=true'}`, {
       method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(values),
     });
     if (!r.ok || seq !== brandPreviewSeq || !brandCtx) return;
@@ -2274,12 +2313,13 @@ const onBrandEvent = e => {
   } else if (t.id === 'br-global') {
     document.getElementById('br-colors').classList.toggle('hidden', t.checked);
   } else if (t.dataset && t.dataset.brandAuto) {
-    const el = document.getElementById(`br-c-${t.dataset.brandAuto}`);
-    if (el) el.disabled = t.checked;
     // The label greys out, not the swatch: the swatch keeps showing the colour
-    // that Auto works out.
+    // that Auto works out, and stays clickable.
     const lab = document.getElementById(`br-l-${t.dataset.brandAuto}`);
     if (lab) lab.classList.toggle('opacity-50', t.checked);
+  } else if (t.type === 'color' && typeof t.id === 'string' && t.id.startsWith('br-c-')) {
+    const key = t.id.slice('br-c-'.length);
+    takeOffAuto(`br-a-${key}`, `br-l-${key}`);
   }
   scheduleBrandPreview(t.type === 'text' || t.type === 'color' || t.type === 'range' ? 150 : 0);
 };
@@ -2323,19 +2363,52 @@ async function resetBrandColor(key) {
   scheduleBrandPreview(0);
 }
 
+// A colour on Auto can still be clicked. Choosing one there is choosing a
+// custom colour, so the field comes off Auto by itself.
+function takeOffAuto(autoId, labelId) {
+  const auto = document.getElementById(autoId);
+  if (!auto || !auto.checked) return;
+  auto.checked = false;
+  const lab = document.getElementById(labelId);
+  if (lab) lab.classList.remove('opacity-50');
+}
+
 const BUILT_IN_COLORS = { brand_primary: '#D9523C', brand_bg: '#F2F0E9' };
 
+// An optional colour goes back to its add-on option: Auto when that is empty,
+// which it is unless the add-on sets one. Like the two above it only moves the
+// field, so the dialog stays open and Save is what stores it.
 function resetSettingColor(key) {
   const el = document.getElementById(`set-${key}`);
-  if (el && BUILT_IN_COLORS[key]) el.value = BUILT_IN_COLORS[key].toLowerCase();
+  if (!el) return;
+  if (BUILT_IN_COLORS[key]) {
+    el.value = BUILT_IN_COLORS[key].toLowerCase();
+  } else {
+    const auto = document.getElementById(`set-${key}-auto`);
+    const entry = settingsState[key];
+    const option = entry && entry.option != null ? String(entry.option) : '';
+    const useAuto = !HEX_RE.test(option);
+    if (!useAuto) el.value = option.toLowerCase();
+    if (auto) auto.checked = useAuto;
+    const lab = document.getElementById(`set-${key}-label`);
+    if (lab) lab.classList.toggle('opacity-50', useAuto);
+  }
   scheduleThemePreview(0);
 }
 
 function openBrandingCreate() {
   // Work on a copy so Cancel leaves what was already chosen alone.
   const copy = Object.assign({}, createBranding, { colors: Object.assign({}, createBranding.colors) });
-  if (copy.file) copy.fileUrl = URL.createObjectURL(copy.file);
+  copy.fileUrl = null;
   openBrandingDialog({ mode: 'create', tokenId: null, state: copy }, '');
+  if (copy.file) {
+    fileToDataUrl(copy.file).then(url => {
+      if (!brandCtx || brandCtx.state !== copy || copy.file === null) return;
+      copy.fileUrl = url;
+      refreshBrandLogoThumb();
+      scheduleBrandPreview(0);
+    });
+  }
 }
 
 function openBrandingEdit(tokenId) {
@@ -2345,13 +2418,12 @@ function openBrandingEdit(tokenId) {
 }
 
 function closeBrandingModal() {
-  if (brandCtx && brandCtx.state.fileUrl) URL.revokeObjectURL(brandCtx.state.fileUrl);
   clearTimeout(brandPreviewTimer);
   brandCtx = null;
   closeModal('branding-modal');
 }
 
-function onBrandFile(input) {
+async function onBrandFile(input) {
   const s = brandCtx.state;
   const err = document.getElementById('branding-error');
   err.textContent = '';
@@ -2362,22 +2434,25 @@ function onBrandFile(input) {
     input.value = '';
     return;
   }
-  if (s.fileUrl) URL.revokeObjectURL(s.fileUrl);
   s.file = f;
-  s.fileUrl = URL.createObjectURL(f);
+  s.fileUrl = null;
   s.removeLogo = false;
   // Redrawing would drop the chosen file from the input, so the logo bits are
   // updated in place and the server has the final say on size and format.
   readBrandingForm();
   document.getElementById('br-file-name').textContent = f.name;
   document.getElementById('br-height-row').classList.remove('hidden');
+  const url = await fileToDataUrl(f);
+  // A different file, or a closed dialog, may have come in while this one was read.
+  if (!brandCtx || brandCtx.state !== s || s.file !== f) return;
+  s.fileUrl = url;
+  refreshBrandLogoThumb();
   scheduleBrandPreview(0);
 }
 
 function removeBrandLogo() {
   readBrandingForm();
   const s = brandCtx.state;
-  if (s.fileUrl) URL.revokeObjectURL(s.fileUrl);
   s.file = null; s.fileUrl = null; s.removeLogo = true;
   drawBrandingForm();
 }
@@ -2401,8 +2476,7 @@ async function submitBranding() {
     // Stage it: the logo file itself is uploaded after the link exists.
     createBranding = Object.assign({}, s, { colors: Object.assign({}, s.colors), fileUrl: null });
     updateBrandingSummary();
-    brandCtx.state.fileUrl = null;   // not revoked here: nothing else holds it
-    if (s.fileUrl) URL.revokeObjectURL(s.fileUrl);
+    brandCtx.state.fileUrl = null;
     closeBrandingModal();
     return;
   }
@@ -2933,12 +3007,13 @@ function settingsInputHtml(f, entry) {
     return `<textarea id="${id}" rows="${f.rows || 2}" maxlength="${f.maxlength}" class="${cls}">${esc(value)}</textarea>`;
   }
   if (f.type === 'color') {
-    // An optional colour left blank is on Auto: the picker is greyed out and
-    // shows what the server works out, which the preview call fills in.
+    // An optional colour left blank is on Auto: its label is greyed and the
+    // swatch shows what the server works out, which the preview call fills in.
+    // The swatch stays clickable: picking a colour takes the field off Auto.
     const auto = !!f.optional && value === '';
     const shown = auto ? '#808080' : value;
     return `<div class="flex items-center gap-3">
-      <input id="${id}" type="color" value="${esc(shown.toLowerCase())}"${auto ? ' disabled' : ''} class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">
+      <input id="${id}" type="color" value="${esc(shown.toLowerCase())}" class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">
       ${f.optional ? `<label class="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
         <input id="${id}-auto" type="checkbox" data-auto-for="${esc(f.key)}" class="w-4 h-4 rounded accent-primary"${auto ? ' checked' : ''}>
         ${esc(tr('settings.auto'))}
@@ -2951,12 +3026,23 @@ function settingsInputHtml(f, entry) {
   return `<input id="${id}" type="text" maxlength="${f.maxlength}" placeholder="${esc(f.placeholder || '')}" value="${esc(value)}" class="${cls}">`;
 }
 
+// What follows a field's hint. A colour says nothing about the add-on option
+// (it has its own Revert, and Auto needs no explaining); Primary and Background
+// instead show HomePass's built-in colour, faintly, once they are overridden.
+// Every other setting says which add-on option it is overriding.
+function settingNoteHtml(f, entry, option) {
+  if (!entry.overridden) return '';
+  if (f.type !== 'color') return ` <span class="text-accent">${esc(tr('settings.overriding', { option }))}</span>`;
+  const builtIn = BUILT_IN_COLORS[f.key];
+  return builtIn ? ` <span class="opacity-60">${esc(tr('settings.default_color', { color: builtIn }))}</span>` : '';
+}
+
 function settingRowHtml(f, entry) {
   const option = entry.option === '' || entry.option == null ? tr('settings.empty') : String(entry.option);
   return `<div>
     <div class="flex items-center justify-between gap-2 mb-1.5">
       <label id="set-${f.key}-label" for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted${f.type === 'color' && f.optional && (entry.value == null || entry.value === '') ? ' opacity-50' : ''}">${esc(f.label)}</label>
-      ${f.type === 'color' && !f.optional ? `<button type="button" data-action="reset-color" data-key="${esc(f.key)}"
+      ${f.type === 'color' && (!f.optional || entry.overridden) ? `<button type="button" data-action="reset-color" data-key="${esc(f.key)}"
         class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
         <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
       </button>` : entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
@@ -2965,8 +3051,7 @@ function settingRowHtml(f, entry) {
       </button>` : ''}
     </div>
     ${settingsInputHtml(f, entry)}
-    <p class="text-[11px] text-muted mt-1">${esc(f.hint)}${entry.overridden
-      ? ` <span class="text-accent">${esc(tr('settings.overriding', { option }))}</span>` : ''}</p>
+    <p class="text-[11px] text-muted mt-1">${esc(f.hint)}${settingNoteHtml(f, entry, option)}</p>
   </div>`;
 }
 
@@ -3101,21 +3186,21 @@ function bindSettingsListeners() {
   if (settingsListenersBound) return;
   settingsListenersBound = true;
   const host = document.getElementById('settings-fields');
-  const onColorEvent = e => {
-    const t = e.target;
-    if (t.dataset && t.dataset.autoFor) {
-      const el = document.getElementById(`set-${t.dataset.autoFor}`);
-      if (el) el.disabled = t.checked;
-      const lab = document.getElementById(`set-${t.dataset.autoFor}-label`);
-      if (lab) lab.classList.toggle('opacity-50', t.checked);
-      scheduleThemePreview(0);
-    } else if (t.type === 'color') {
-      scheduleThemePreview();
-    }
-  };
   host.addEventListener('input', onColorEvent);
   host.addEventListener('change', onColorEvent);
 }
+
+const onColorEvent = e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.autoFor) {
+    const lab = document.getElementById(`set-${t.dataset.autoFor}-label`);
+    if (lab) lab.classList.toggle('opacity-50', t.checked);
+    scheduleThemePreview(0);
+  } else if (t.type === 'color') {
+    takeOffAuto(`${t.id}-auto`, `${t.id}-label`);
+    scheduleThemePreview();
+  }
+};
 
 // Only what actually changed is sent, so a save touches nothing the admin did
 // not edit — and so an untouched field never becomes an override just because
