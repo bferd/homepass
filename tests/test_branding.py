@@ -599,3 +599,10 @@ async def test_admin_logo_image_is_served_safely(client, admin_session):
     assert "sandbox" in r.headers["content-security-policy"]
     await client.delete(f"/admin/tokens/{t['id']}/logo", cookies=admin_session)
     assert (await client.get(f"/admin/tokens/{t['id']}/logo", cookies=admin_session)).status_code == 404
+
+
+@pytest.mark.parametrize("body", [{"eyebrow": 5}, {"colors": ["#fff"]}, {"colors": {"brand_primary": 7, "brand_bg": "#ffffff"}}])
+async def test_wrong_types_are_422_not_500(client, admin_session, body):
+    t = await _make()
+    resp = await client.patch(f"/admin/tokens/{t['id']}/branding", json=body, cookies=admin_session)
+    assert resp.status_code == 422

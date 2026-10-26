@@ -7,7 +7,7 @@ import secrets
 import time
 import unicodedata
 from types import SimpleNamespace
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 
@@ -555,7 +555,7 @@ _LOGO_UPLOAD_SLACK = 16 * 1024
 async def upload_token_logo(
     token_id: str,
     request: Request,
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File()],
     notify: bool = Query(default=True),
     _: str = Depends(require_admin),
 ) -> dict:

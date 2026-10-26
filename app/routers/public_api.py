@@ -19,7 +19,7 @@ handler the dashboard calls, so the guest-side effects are the dashboard's.
 """
 import json
 import time
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import (
     APIRouter,
@@ -332,7 +332,7 @@ async def delete_token(token_id: str) -> Response:
 
 
 @router.post("/tokens/{token_id}/logo", response_model=ApiTokenResponse)
-async def upload_logo(token_id: str, request: Request, file: UploadFile = File(...)) -> dict:
+async def upload_logo(token_id: str, request: Request, file: Annotated[UploadFile, File()]) -> dict:
     """Upload or replace a link's logo: a PNG or WebP of 32 to 1024 px per side
     and up to 512 KB, sent as multipart form data in the `file` field. The
     image is checked from its bytes, not its name or declared type. The

@@ -66,6 +66,12 @@ class LogoError(ValueError):
 
 # ── text and colour checks (shared by the request models) ─────────────────
 
+class WrongType(TypeError, ValueError):
+    """A value of the wrong type. It is a TypeError for what it is, and also a
+    ValueError so a pydantic validator turns it into a 422 and the callers that
+    catch ValueError keep working."""
+
+
 def clean_line(value):
     """One line of plain text. Line breaks, tabs and other control or format
     characters (which include the invisible ones that reorder text) become
@@ -73,7 +79,7 @@ def clean_line(value):
     if value is None:
         return value
     if not isinstance(value, str):
-        raise ValueError("must be text")
+        raise WrongType("must be text")
     text = "".join(" " if unicodedata.category(ch)[0] == "C" else ch for ch in value)
     return " ".join(text.split())
 
@@ -85,7 +91,7 @@ def clean_colors(value):
     if value is None:
         return None
     if not isinstance(value, dict):
-        raise ValueError("colors must be an object")
+        raise WrongType("colors must be an object")
     unknown = set(value) - set(COLOR_KEYS)
     if unknown:
         raise ValueError("unknown colour: " + ", ".join(sorted(map(str, unknown))))
@@ -95,7 +101,7 @@ def clean_colors(value):
         if raw is None:
             raw = ""
         if not isinstance(raw, str):
-            raise ValueError(f"{key} must be text")
+            raise WrongType(f"{key} must be text")
         raw = raw.strip()
         if raw == "":
             if key in REQUIRED_COLOR_KEYS:
