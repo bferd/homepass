@@ -553,11 +553,11 @@ curl -X POST -H "X-API-Key: $HOMEPASS_API_TOKEN" -H "Content-Type: application/j
 
 Endpoints under `/api/v1/tokens`: list, create, get, `PATCH` (label, entities,
 expiry, PIN, `remember_pin`, `device_binding`, `show_remaining_uses`,
-`info_text`, `info_text_in_footer`, `group_headings`), `DELETE`,
+`info_text`, `info_text_in_footer`, `group_headings`, `branding`), `DELETE`,
 `PUT .../{id}/schedule` (start, end, weekly windows, use limit), `POST .../{id}/revoke`, `renew`,
 `activate`, `rotate-slug`, `duplicate` and `unbind`, and
 `.../{id}/access-codes` (list, create, `{code_id}/rotate`, `DELETE {code_id}`)
-for links without PIN. Create accepts every field the dashboard sets, and
+for links without PIN, and `POST` or `DELETE .../{id}/logo` for a link's logo. Create accepts every field the dashboard sets, and
 responses carry them back. Each one runs the dashboard's own logic, so
 validation and side effects (open guest tabs being told a link was revoked, for
 instance) are identical. Expiries take `expires_at` (Unix seconds) or

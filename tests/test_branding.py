@@ -606,3 +606,8 @@ async def test_wrong_types_are_422_not_500(client, admin_session, body):
     t = await _make()
     resp = await client.patch(f"/admin/tokens/{t['id']}/branding", json=body, cookies=admin_session)
     assert resp.status_code == 422
+
+
+def test_a_color_with_a_newline_in_it_is_refused():
+    with pytest.raises(ValueError):
+        branding.clean_colors({"brand_primary": "#112233", "brand_bg": "#ffffff", "brand_accent": "#aabbcc\nx"})

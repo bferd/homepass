@@ -57,7 +57,7 @@ COLOR_KEYS = (
 )
 REQUIRED_COLOR_KEYS = ("brand_primary", "brand_bg")
 
-_HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_HEX = re.compile(r"#[0-9A-Fa-f]{6}")
 
 
 class LogoError(ValueError):
@@ -107,7 +107,7 @@ def clean_colors(value):
             if key in REQUIRED_COLOR_KEYS:
                 raise ValueError(f"{key} is required when a link has its own colours")
             out[key] = ""
-        elif _HEX.match(raw):
+        elif _HEX.fullmatch(raw):
             out[key] = raw.upper()
         else:
             raise ValueError(f"{key} must be a colour like #1A2B3C")
