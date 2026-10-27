@@ -2930,10 +2930,6 @@ async function confirmDelete(id) {
   });
 }
 
-// ── Settings ──────────────────────────────────────────────────────────
-// The deployment settings that can change while the app runs. The server owns
-// the list (SettingsUpdateRequest) and refuses anything else; this only says
-// how to draw each one. A key the server does not report is not drawn.
 // A colour on Auto can still be clicked. Choosing one there is choosing a
 // custom colour, so the field comes off Auto by itself.
 function takeOffAuto(autoId, labelId) {
@@ -2967,6 +2963,10 @@ function resetSettingColor(key) {
   scheduleThemePreview(0);
 }
 
+// ── Settings ──────────────────────────────────────────────────────────
+// The deployment settings that can change while the app runs. The server owns
+// the list (SettingsUpdateRequest) and refuses anything else; this only says
+// how to draw each one. A key the server does not report is not drawn.
 const SETTINGS_FIELDS = [
   { key: 'app_name', label: tr('settings.app_name'), type: 'text', maxlength: 64,
     hint: tr('settings.app_name_hint') },
