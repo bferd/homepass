@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app import theme
+from app import branding, theme
 from app.region import valid_region
 
 NEVER_EXPIRES_SECONDS = 4102444800  # 2099-12-31T00:00:00Z
@@ -276,6 +276,65 @@ def clean_group_headings(value: Any) -> Any:
     return cleaned
 
 
+class BrandingInput(BaseModel):
+    """A link's branding as sent when creating one, or copied from another.
+
+    Every part is optional and blank shows nothing. ``colors`` is None while
+    the link uses the global colours; otherwise all nine colour settings, with
+    "" for Auto on the seven optional ones. The logo is a file, uploaded
+    separately (POST /admin/tokens/{id}/logo).
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    eyebrow: str = Field(default="", max_length=branding.EYEBROW_MAX)
+    title: str = Field(default="", max_length=branding.TITLE_MAX)
+    logo_height: int = Field(
+        default=branding.LOGO_HEIGHT_DEFAULT,
+        ge=branding.LOGO_HEIGHT_MIN, le=branding.LOGO_HEIGHT_MAX, strict=True,
+    )
+    title_size: int = Field(
+        default=branding.TITLE_SIZE_DEFAULT,
+        ge=branding.TITLE_SIZE_MIN, le=branding.TITLE_SIZE_MAX, strict=True,
+    )
+    eyebrow_size: int = Field(
+        default=branding.EYEBROW_SIZE_DEFAULT,
+        ge=branding.EYEBROW_SIZE_MIN, le=branding.EYEBROW_SIZE_MAX, strict=True,
+    )
+    colors: dict[str, str] | None = None
+
+    _clean_text = field_validator("eyebrow", "title", mode="before")(branding.clean_line)
+    _clean_colors = field_validator("colors", mode="before")(branding.clean_colors)
+
+
+class TokenBrandingRequest(BaseModel):
+    """Change a link's branding. A field left out keeps its stored value.
+
+    ``eyebrow`` and ``title`` may be "" to clear them. ``colors`` is the one
+    field where null means something: it puts the link back on the global
+    colours.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    eyebrow: str | None = Field(default=None, max_length=branding.EYEBROW_MAX)
+    title: str | None = Field(default=None, max_length=branding.TITLE_MAX)
+    logo_height: int | None = Field(
+        default=None,
+        ge=branding.LOGO_HEIGHT_MIN, le=branding.LOGO_HEIGHT_MAX, strict=True,
+    )
+    title_size: int | None = Field(
+        default=None,
+        ge=branding.TITLE_SIZE_MIN, le=branding.TITLE_SIZE_MAX, strict=True,
+    )
+    eyebrow_size: int | None = Field(
+        default=None,
+        ge=branding.EYEBROW_SIZE_MIN, le=branding.EYEBROW_SIZE_MAX, strict=True,
+    )
+    colors: dict[str, str] | None = None
+
+    _clean_text = field_validator("eyebrow", "title", mode="before")(branding.clean_line)
+    _clean_colors = field_validator("colors", mode="before")(branding.clean_colors)
+
+
 class TokenCreateRequest(BaseModel):
     label: str = Field(..., min_length=1, max_length=200)
     slug: str | None = Field(default=None, pattern=r"^[a-z0-9_-]{1,64}$")
@@ -330,6 +389,11 @@ class TokenCreateRequest(BaseModel):
     # a section. None and {} both mean every heading as default. See
     # clean_group_headings.
     group_headings: dict[str, Any] | None = None
+    # Eyebrow, title, logo size and colours for the link's pages. None is
+    # unbranded. The logo image is uploaded after the link exists, or copied
+    # from another link with copy_logo_from (what Duplicate does).
+    branding: BrandingInput | None = None
+    copy_logo_from: str | None = Field(default=None, max_length=64)
 
     _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
     _clean_group_headings = field_validator("group_headings", mode="before")(
@@ -558,6 +622,8 @@ class ApiTokenUpdateRequest(BaseModel):
     info_text_in_footer: bool | None = None
     # Same as the dashboard's Section headings: None keeps, {} resets.
     group_headings: dict[str, Any] | None = None
+    # Same as the dashboard's Branding dialog; see TokenBrandingRequest.
+    branding: TokenBrandingRequest | None = None
 
     _clean_info_text = field_validator("info_text", mode="before")(clean_info_text)
     _clean_group_headings = field_validator("group_headings", mode="before")(
@@ -620,6 +686,25 @@ class ApiAccessCodeCreated(ApiAccessCode):
     code: str
 
 
+class ApiBrandingLogo(BaseModel):
+    """The uploaded logo. `version` changes when the image does; the guest
+    page serves it at /g/<slug>/logo?v=<version>."""
+    version: str
+    width: int
+    height: int
+
+
+class ApiBranding(BaseModel):
+    """A link's branding. `colors` is null while it uses the global colours."""
+    eyebrow: str = ""
+    title: str = ""
+    logo_height: int = branding.LOGO_HEIGHT_DEFAULT
+    title_size: int = branding.TITLE_SIZE_DEFAULT
+    eyebrow_size: int = branding.EYEBROW_SIZE_DEFAULT
+    colors: dict[str, str] | None = None
+    logo: ApiBrandingLogo | None = None
+
+
 class ApiTokenResponse(BaseModel):
     """A token as the API returns it. Same fields as the dashboard sees.
 
@@ -650,6 +735,7 @@ class ApiTokenResponse(BaseModel):
     # Only the headings the admin changed, keyed by group key; {} is all
     # defaults.
     group_headings: dict[str, ApiGroupHeading]
+    branding: ApiBranding = Field(default_factory=ApiBranding)
     country_allowlist: list[str] | None
     device_binding: bool
     device_bound_at: int | None

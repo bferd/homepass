@@ -29,6 +29,7 @@ installs, just a link.
 - **Scheduled start** — an optional start time; the link can be shared early and shows a countdown until then
 - **Weekly access windows** — limit a link to recurring days and times (overnight windows supported), in Home Assistant's time zone
 - **Single-use links** — a link that stops after one (or N) guest commands; opening it or a chat-app preview never uses it up
+- **Link branding** — a logo, eyebrow, title and optional colors per link, so each guest, rental or project gets its own look
 - **Welcome and guest info text** — a welcome message on every guest page and a note per link (door code, parking), in a collapsible top card or a footer box, with simple formatting tags (bold, headings, lists, font color) and web links, email addresses and phone numbers made tappable
 - **Optional PIN** — a 4–8 digit PIN on top of the link, enforced on every guest endpoint,
   with revocable links that skip it and a per-link choice of whether it is remembered
@@ -552,11 +553,11 @@ curl -X POST -H "X-API-Key: $HOMEPASS_API_TOKEN" -H "Content-Type: application/j
 
 Endpoints under `/api/v1/tokens`: list, create, get, `PATCH` (label, entities,
 expiry, PIN, `remember_pin`, `device_binding`, `show_remaining_uses`,
-`info_text`, `info_text_in_footer`, `group_headings`), `DELETE`,
+`info_text`, `info_text_in_footer`, `group_headings`, `branding`), `DELETE`,
 `PUT .../{id}/schedule` (start, end, weekly windows, use limit), `POST .../{id}/revoke`, `renew`,
 `activate`, `rotate-slug`, `duplicate` and `unbind`, and
 `.../{id}/access-codes` (list, create, `{code_id}/rotate`, `DELETE {code_id}`)
-for links without PIN. Create accepts every field the dashboard sets, and
+for links without PIN, and `POST` or `DELETE .../{id}/logo` for a link's logo. Create accepts every field the dashboard sets, and
 responses carry them back. Each one runs the dashboard's own logic, so
 validation and side effects (open guest tabs being told a link was revoked, for
 instance) are identical. Expiries take `expires_at` (Unix seconds) or

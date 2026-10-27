@@ -14,6 +14,7 @@ upstream's; 0.3.0 is the first release from this fork.
 ### Added
 
 - **More color settings, and a better dark mode.** Settings now has seven optional colors besides Primary and Background: **Secondary**, **Accent**, **Card** and **Text** for light mode, and **Dark Background**, **Dark Card** and **Dark Text** for dark mode. Each is blank by default and worked out from the others, so nothing changes unless you set one. They are also add-on options and `BRAND_SECONDARY`, `BRAND_ACCENT`, `BRAND_SURFACE`, `BRAND_TEXT`, `BRAND_DARK_BG`, `BRAND_DARK_SURFACE` and `BRAND_DARK_TEXT` environment variables. The dashboard shows a light and a dark sample as you edit, shows the color a blank field currently resolves to, and warns about text that is hard to read. Tick **Auto** on a field to hand it back.
+- **Link branding.** Give each link its own logo, title and eyebrow text, and optionally its own colors, from the create form or the new **Branding** button on its card. They replace the icon, label and app name in the guest page's header. Adds a database migration (016), a `branding` field to the admin and public APIs, and logo upload and delete to the public API. See [Link branding](DOCS.md#link-branding).
 
 ### Changed
 

@@ -191,12 +191,29 @@
   <div class="px-4 py-3">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3 flex-1 min-w-0">
+        {# A link's own logo, title and eyebrow replace the icon, label and app name
+           (app/branding.py page_context). Each falls back to the usual part when
+           unset, and the row grows taller as they need. #}
+        {% if branding and branding.logo_url %}
+        <img src="{{ branding.logo_url }}" alt="" decoding="async"
+             style="width: {{ branding.logo_width }}px; max-width: {{ branding.logo_max_width }}%; aspect-ratio: {{ branding.logo_ratio }};"
+             class="h-auto object-contain flex-shrink-0">
+        {% else %}
         <div class="w-10 h-10 rounded-full bg-accent/15 flex items-center justify-center flex-shrink-0">
           <span aria-hidden="true" class="material-symbols-outlined text-accent text-xl">person</span>
         </div>
+        {% endif %}
         <div class="min-w-0">
+          {% if branding and branding.title %}
+          <div style="font-size: {{ branding.title_size }}px" class="font-serif leading-tight break-words">{{ branding.title }}</div>
+          {% else %}
           <div class="text-sm font-serif truncate">{{ label }}</div>
+          {% endif %}
+          {% if branding and branding.eyebrow %}
+          <div style="font-size: {{ branding.eyebrow_size }}px" class="text-accent font-display font-medium tracking-wide break-words">{{ branding.eyebrow }}</div>
+          {% else %}
           <div class="text-[10px] text-muted font-mono uppercase tracking-widest">{{ app_name }}</div>
+          {% endif %}
         </div>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">

@@ -12,5 +12,7 @@
   "settings.brand_text": "Text colour",
   "settings.brand_dark_surface": "Dark card colour",
   "settings.brand_dark_text": "Dark text colour",
-  "settings.warn_button": "Button text is hard to read on the primary colour."
+  "settings.warn_button": "Button text is hard to read on the primary colour.",
+  "branding.sum_colors": "Own colours",
+  "branding.use_global": "Use global colours"
 }
