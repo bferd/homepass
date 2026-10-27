@@ -17,6 +17,9 @@
     --color-muted:         107 99 96;    /* #6B6360 */
     --color-soot:          44 36 32;     /* #2C2420 */
     --color-primary-hover: 196 69 52;   /* #C44534 */
+    --color-on-primary:    255 255 255;  /* text on a primary button */
+    --color-fg-light:      44 36 32;     /* #2C2420, body text */
+    --color-fg-dark:       243 244 246;  /* #F3F4F6, body text in dark mode */
 
     /* Hex equivalents for use in <style> blocks and meta tags */
     --hex-primary:    #D9523C;

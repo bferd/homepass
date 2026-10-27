@@ -36,7 +36,11 @@ Set these options in the add-on Configuration tab:
 | **App Name** | Display name shown to guests (default: "Home Access") |
 | **Contact Message** | Message shown when a guest link expires |
 | **Background Color** | Hex color for page background (e.g., `#F2F0E9`) |
-| **Primary Color** | Hex color for accents and buttons (e.g., `#D9523C`) |
+| **Primary Color** | Hex color for buttons and highlights (e.g., `#D9523C`) |
+| **Secondary Color** | Optional hex color for info buttons and secondary highlights. Blank picks one that goes with the primary. |
+| **Accent Color** | Optional hex color for small details and links. Blank picks one that goes with the primary. |
+| **Card Color**, **Text Color** | Optional hex colors for cards and text in light mode. Blank is worked out from the background. |
+| **Dark Background Color**, **Dark Card Color**, **Dark Text Color** | Optional hex colors for dark mode. Blank is worked out: the dark background from the light one, then the card and text from the dark background. |
 | **Guest URL** | External base URL for guest links (e.g., `https://guest.myhouse.com` or `https://guest.myhouse.com/visitors`). Leave empty for local network. For a path prefix, the reverse proxy must preserve the public `Host` and strip the prefix before forwarding to HomePass. |
 | **Time Zone** | IANA time zone weekly access windows are evaluated in (e.g., `Europe/Madrid`). Leave empty to use Home Assistant's own time zone, which is right for almost every install. |
 | **Home Network Ranges** | Comma-separated CIDRs that count as your home network (e.g., `192.168.1.0/24`). Controls marked **Only from the home network** accept commands only from these. Leave empty to turn that off. |
@@ -48,7 +52,7 @@ These are the only add-on options. Everything else is set per link, in the dashb
 
 ### Changing settings from the dashboard
 
-The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, both colours and how many days of activity to keep. Changes apply straight away, with no restart.
+The **Settings** button (the sliders icon in the dashboard header) edits App Name, Contact Message, Guest URL, the colors and how many days of activity to keep. The colors section draws a light and a dark sample as you change them, shows what each blank color currently works out to, and warns when text would be hard to read. Tick **Auto** on an optional color to go back to the worked-out one. Changes apply straight away, with no restart.
 
 Two settings are only in the dashboard, not in the add-on options:
 

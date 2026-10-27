@@ -9,6 +9,16 @@ HomePass is a fork of [Rohithkadaveru/ha-pass](https://github.com/Rohithkadaveru
 unmaintained upstream since April 2026. Releases up to and including 0.2.4 are
 upstream's; 0.3.0 is the first release from this fork.
 
+## [Unreleased]
+
+### Added
+
+- **More color settings, and a better dark mode.** Settings now has seven optional colors besides Primary and Background: **Secondary**, **Accent**, **Card** and **Text** for light mode, and **Dark Background**, **Dark Card** and **Dark Text** for dark mode. Each is blank by default and worked out from the others, so nothing changes unless you set one. They are also add-on options and `BRAND_SECONDARY`, `BRAND_ACCENT`, `BRAND_SURFACE`, `BRAND_TEXT`, `BRAND_DARK_BG`, `BRAND_DARK_SURFACE` and `BRAND_DARK_TEXT` environment variables. The dashboard shows a light and a dark sample as you edit, shows the color a blank field currently resolves to, and warns about text that is hard to read. Tick **Auto** on a field to hand it back.
+
+### Changed
+
+- **Derived colors are chosen for contrast.** With a custom Background or Primary, dark mode used to be that background mixed toward black, which made the page, cards and borders almost the same color. Dark mode now steps from page to card to border, text colors are pushed lighter or darker until they are readable (a dark Background now gets light text), and the secondary and accent colors are picked to sit with the Primary and stay readable in both modes. Button text turns dark when the Primary is too pale for white. The default colors are unchanged.
+
 ## [1.2.0] - 2026-10-23
 
 ### Added

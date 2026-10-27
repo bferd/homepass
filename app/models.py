@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app import theme
 from app.region import valid_region
 
 NEVER_EXPIRES_SECONDS = 4102444800  # 2099-12-31T00:00:00Z
@@ -667,6 +668,8 @@ WELCOME_TEXT_MAX = INFO_TEXT_MAX
 GUEST_URL_MAX = 300
 RETENTION_DAYS_MAX = 3650
 HEX_COLOR_PATTERN = r"^#[0-9A-Fa-f]{6}$"
+# The optional colours also accept blank, which means "work it out".
+OPTIONAL_HEX_COLOR_PATTERN = r"^(#[0-9A-Fa-f]{6})?$"
 
 # A guest URL is a base that "/g/<slug>" is appended to, then copied into a
 # message to a guest and dropped into a JavaScript string on the dashboard. So
@@ -697,6 +700,30 @@ def normalise_guest_url(value: str) -> str:
     return value
 
 
+# The colour settings, required ones first. Shared by the settings save and the
+# dashboard's live preview so the two cannot drift apart.
+THEME_FIELDS = theme.COLOR_KEYS
+
+
+class ThemePreviewRequest(BaseModel):
+    """Colours to preview in the dashboard before they are saved.
+
+    A field left out keeps the colour now in effect; a blank optional one means
+    "work it out", the same as saving it blank. Nothing here is stored.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    brand_primary: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
+    brand_bg: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
+    brand_secondary: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_accent: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_bg: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+
+
 class SettingsUpdateRequest(BaseModel):
     """Overrides for the deployment settings an admin may change live.
 
@@ -716,6 +743,13 @@ class SettingsUpdateRequest(BaseModel):
     phone_region: str | None = None
     brand_bg: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
     brand_primary: str | None = Field(default=None, pattern=HEX_COLOR_PATTERN)
+    brand_secondary: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_accent: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_bg: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_surface: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
+    brand_dark_text: str | None = Field(default=None, pattern=OPTIONAL_HEX_COLOR_PATTERN)
     guest_url: str | None = Field(default=None, max_length=GUEST_URL_MAX)
     # strict: JSON true would otherwise be accepted as 1 day.
     access_log_retention_days: int | None = Field(
@@ -749,7 +783,11 @@ class SettingsUpdateRequest(BaseModel):
             raise ValueError("must be a two-letter country code, such as CA")
         return value
 
-    @field_validator("brand_bg", "brand_primary")
+    @field_validator(
+        "brand_bg", "brand_primary", "brand_secondary", "brand_accent",
+        "brand_surface", "brand_text", "brand_dark_bg", "brand_dark_surface",
+        "brand_dark_text",
+    )
     @classmethod
     def _upper_hex(cls, value: str | None) -> str | None:
         # One spelling per colour, so #d9523c and the #D9523C default compare

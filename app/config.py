@@ -32,6 +32,15 @@ class Settings(BaseSettings):
     access_log_retention_days: int = Field(default=90, ge=1)
     brand_bg: str = "#F2F0E9"
     brand_primary: str = "#D9523C"
+    # Optional colours, "#RRGGBB" or blank. Blank works the colour out from the
+    # two above (see app/theme.py), so none of these has to be set.
+    brand_secondary: str = ""
+    brand_accent: str = ""
+    brand_surface: str = ""
+    brand_text: str = ""
+    brand_dark_bg: str = ""
+    brand_dark_surface: str = ""
+    brand_dark_text: str = ""
     supervisor_token: str = ""
     guest_url: str = ""
     # IANA zone name ("Europe/Madrid") that weekly access windows are evaluated
