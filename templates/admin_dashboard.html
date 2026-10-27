@@ -25,7 +25,7 @@
 </style>
 {% endblock %}
 
-{% block body_attrs %}class="loading bg-bg-light dark:bg-bg-dark text-soot dark:text-gray-100 font-sans antialiased min-h-dvh"{% endblock %}
+{% block body_attrs %}class="loading bg-bg-light dark:bg-bg-dark text-fg-light dark:text-fg-dark font-sans antialiased min-h-dvh"{% endblock %}
 
 {% block body %}
 <!-- Login Screen -->
@@ -68,7 +68,7 @@
         <span class="text-sm">{{ t('page.login.remember') }}</span>
       </label>
       <div id="l-error" role="alert" class="text-primary text-xs min-h-[18px]"></div>
-      <button data-action="do-login" class="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-display font-semibold text-sm transition-colors">
+      <button data-action="do-login" class="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-display font-semibold text-sm transition-colors">
         {{ t('page.login.sign_in') }}
       </button>
     </div>
@@ -126,7 +126,7 @@
     </div>
     {% endif %}
     <!-- Create Token Button -->
-    <button data-action="open-create-modal" class="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-display font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-6 shadow-lg shadow-primary/20">
+    <button data-action="open-create-modal" class="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-on-primary font-display font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-6 shadow-lg shadow-primary/20">
       <span aria-hidden="true" class="material-symbols-outlined text-lg">add_circle</span>
       {{ t('page.main.create_token') }}
     </button>
@@ -254,7 +254,7 @@
     <div id="create-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="create" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-create" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.create.submit') }}</button>
+      <button data-action="submit-create" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.create.submit') }}</button>
     </div>
   </div>
 </div>
@@ -308,7 +308,7 @@
 
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="entity" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-entity-meta" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.entity.apply') }}</button>
+      <button data-action="submit-entity-meta" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.entity.apply') }}</button>
     </div>
   </div>
 </div>
@@ -334,7 +334,7 @@
     <div id="template-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="template" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-template" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-template" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -353,7 +353,7 @@
     <div id="edit-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="edit" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-edit" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-edit" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -394,7 +394,7 @@
     <div id="extend-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="extend" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button id="extend-submit-btn" data-action="submit-extend" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('action.extend') }}</button>
+      <button id="extend-submit-btn" data-action="submit-extend" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('action.extend') }}</button>
     </div>
   </div>
 </div>
@@ -419,7 +419,7 @@
     <div id="pin-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="pin" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-pin" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-pin" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
 
     <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
@@ -479,7 +479,7 @@
     <div id="schedule-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="schedule" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-schedule" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-schedule" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -498,7 +498,7 @@
     <div id="info-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-3 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="info" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-info" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-info" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -531,7 +531,7 @@
     <div id="settings-error" role="alert" class="text-primary text-xs min-h-[18px] mt-2"></div>
     <div class="flex justify-end gap-2 mt-5 pt-4 border-t border-border-light dark:border-border-dark">
       <button data-action="close-modal" data-modal="settings" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button data-action="submit-settings" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.save') }}</button>
+      <button data-action="submit-settings" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.save') }}</button>
     </div>
   </div>
 </div>
@@ -544,7 +544,7 @@
     <p class="text-sm text-muted mb-5" id="confirm-body"></p>
     <div class="flex gap-2 justify-center">
       <button data-action="close-modal" data-modal="confirm" class="px-4 py-2 text-sm font-display font-medium rounded-xl border border-border-light dark:border-border-dark hover:bg-soot/5 dark:hover:bg-white/5 transition-colors">{{ t('page.common.cancel') }}</button>
-      <button id="confirm-ok" data-action="confirm-ok" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-white transition-colors">{{ t('page.common.confirm') }}</button>
+      <button id="confirm-ok" data-action="confirm-ok" class="px-4 py-2 text-sm font-display font-semibold rounded-xl bg-primary hover:bg-primary-hover text-on-primary transition-colors">{{ t('page.common.confirm') }}</button>
     </div>
   </div>
 </div>
@@ -1220,7 +1220,7 @@ function renderPicker(containerId, pickerState) {
     <div class="flex flex-wrap gap-1.5 mb-3">
       ${PICKER_DOMAINS.map(d => `<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-display font-medium border transition-colors
         ${pickerState.filter === d
-          ? 'bg-primary text-white border-primary'
+          ? 'bg-primary text-on-primary border-primary'
           : 'border-border-light dark:border-border-dark text-muted hover:border-accent dark:hover:border-accent'}"
         data-action="picker-filter" data-container="${containerId}" data-domain="${d}">
         <span aria-hidden="true" class="material-symbols-outlined text-sm">${PICKER_ICONS[d] || 'devices'}</span>
@@ -2434,6 +2434,39 @@ async function confirmDelete(id) {
 // The deployment settings that can change while the app runs. The server owns
 // the list (SettingsUpdateRequest) and refuses anything else; this only says
 // how to draw each one. A key the server does not report is not drawn.
+// A colour on Auto can still be clicked. Choosing one there is choosing a
+// custom colour, so the field comes off Auto by itself.
+function takeOffAuto(autoId, labelId) {
+  const auto = document.getElementById(autoId);
+  if (!auto || !auto.checked) return;
+  auto.checked = false;
+  const lab = document.getElementById(labelId);
+  if (lab) lab.classList.remove('opacity-50');
+}
+
+const BUILT_IN_COLORS = { brand_primary: '#D9523C', brand_bg: '#F2F0E9' };
+
+// An optional colour goes back to its add-on option: Auto when that is empty,
+// which it is unless the add-on sets one. Like the two above it only moves the
+// field, so the dialog stays open and Save is what stores it.
+function resetSettingColor(key) {
+  const el = document.getElementById(`set-${key}`);
+  if (!el) return;
+  if (BUILT_IN_COLORS[key]) {
+    el.value = BUILT_IN_COLORS[key].toLowerCase();
+  } else {
+    const auto = document.getElementById(`set-${key}-auto`);
+    const entry = settingsState[key];
+    const option = entry && entry.option != null ? String(entry.option) : '';
+    const useAuto = !HEX_RE.test(option);
+    if (!useAuto) el.value = option.toLowerCase();
+    if (auto) auto.checked = useAuto;
+    const lab = document.getElementById(`set-${key}-label`);
+    if (lab) lab.classList.toggle('opacity-50', useAuto);
+  }
+  scheduleThemePreview(0);
+}
+
 const SETTINGS_FIELDS = [
   { key: 'app_name', label: tr('settings.app_name'), type: 'text', maxlength: 64,
     hint: tr('settings.app_name_hint') },
@@ -2444,8 +2477,18 @@ const SETTINGS_FIELDS = [
   { key: 'guest_url', label: tr('settings.guest_url'), type: 'text', maxlength: 300,
     placeholder: 'https://guest.myhouse.com',
     hint: tr('settings.guest_url_hint') },
-  { key: 'brand_primary', label: tr('settings.brand_primary'), type: 'color', hint: tr('settings.brand_primary_hint') },
-  { key: 'brand_bg', label: tr('settings.brand_bg'), type: 'color', hint: tr('settings.brand_bg_hint') },
+  // The colours are drawn together as one section with a live preview (see
+  // colorsSectionHtml), at the place of the first of them. An optional colour
+  // can be left on Auto, which saves it blank so the server works it out.
+  { key: 'brand_primary', label: tr('settings.brand_primary'), type: 'color', group: 'brand', hint: tr('settings.brand_primary_hint') },
+  { key: 'brand_secondary', label: tr('settings.brand_secondary'), type: 'color', optional: true, group: 'brand', hint: tr('settings.brand_secondary_hint') },
+  { key: 'brand_accent', label: tr('settings.brand_accent'), type: 'color', optional: true, group: 'brand', hint: tr('settings.brand_accent_hint') },
+  { key: 'brand_bg', label: tr('settings.brand_bg'), type: 'color', group: 'light', hint: tr('settings.brand_bg_hint') },
+  { key: 'brand_surface', label: tr('settings.brand_surface'), type: 'color', optional: true, group: 'light', hint: tr('settings.brand_surface_hint') },
+  { key: 'brand_text', label: tr('settings.brand_text'), type: 'color', optional: true, group: 'light', hint: tr('settings.brand_text_hint') },
+  { key: 'brand_dark_bg', label: tr('settings.brand_dark_bg'), type: 'color', optional: true, group: 'dark', hint: tr('settings.brand_dark_bg_hint') },
+  { key: 'brand_dark_surface', label: tr('settings.brand_dark_surface'), type: 'color', optional: true, group: 'dark', hint: tr('settings.brand_dark_surface_hint') },
+  { key: 'brand_dark_text', label: tr('settings.brand_dark_text'), type: 'color', optional: true, group: 'dark', hint: tr('settings.brand_dark_text_hint') },
   { key: 'access_log_retention_days', label: tr('settings.retention'), type: 'number', min: 1, max: 3650,
     hint: tr('settings.retention_hint') },
   { key: 'phone_region', label: tr('settings.phone_region'), type: 'text', maxlength: 2,
@@ -2453,7 +2496,8 @@ const SETTINGS_FIELDS = [
 ];
 // Rendered into the page by the server, so a change is only visible after a
 // reload. The rest (the contact message, retention) are read per request.
-const SETTINGS_NEED_RELOAD = ['app_name', 'guest_url', 'brand_bg', 'brand_primary'];
+const SETTINGS_NEED_RELOAD = ['app_name', 'guest_url',
+  ...SETTINGS_FIELDS.filter(f => f.type === 'color').map(f => f.key)];
 let settingsState = {};
 
 function settingsInputHtml(f, entry) {
@@ -2464,7 +2508,18 @@ function settingsInputHtml(f, entry) {
     return `<textarea id="${id}" rows="${f.rows || 2}" maxlength="${f.maxlength}" class="${cls}">${esc(value)}</textarea>`;
   }
   if (f.type === 'color') {
-    return `<input id="${id}" type="color" value="${esc(value.toLowerCase())}" class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">`;
+    // An optional colour left blank is on Auto: its label is greyed and the
+    // swatch shows what the server works out, which the preview call fills in.
+    // The swatch stays clickable: picking a colour takes the field off Auto.
+    const auto = !!f.optional && value === '';
+    const shown = auto ? '#808080' : value;
+    return `<div class="flex items-center gap-3">
+      <input id="${id}" type="color" value="${esc(shown.toLowerCase())}" class="w-16 h-10 p-1 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer">
+      ${f.optional ? `<label class="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
+        <input id="${id}-auto" type="checkbox" data-auto-for="${esc(f.key)}" class="w-4 h-4 rounded accent-primary"${auto ? ' checked' : ''}>
+        ${esc(tr('settings.auto'))}
+      </label>` : ''}
+    </div>`;
   }
   if (f.type === 'number') {
     return `<input id="${id}" type="number" min="${f.min}" max="${f.max}" step="1" value="${esc(value)}" class="${cls}">`;
@@ -2472,25 +2527,181 @@ function settingsInputHtml(f, entry) {
   return `<input id="${id}" type="text" maxlength="${f.maxlength}" placeholder="${esc(f.placeholder || '')}" value="${esc(value)}" class="${cls}">`;
 }
 
-function renderSettings() {
-  document.getElementById('settings-fields').innerHTML = SETTINGS_FIELDS.map(f => {
-    const entry = settingsState[f.key];
-    if (!entry) return '';
-    const option = entry.option === '' || entry.option == null ? tr('settings.empty') : String(entry.option);
-    return `<div>
-      <div class="flex items-center justify-between gap-2 mb-1.5">
-        <label for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted">${esc(f.label)}</label>
-        ${entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
-          class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
-          <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
-        </button>` : ''}
-      </div>
-      ${settingsInputHtml(f, entry)}
-      <p class="text-[11px] text-muted mt-1">${esc(f.hint)}${entry.overridden
-        ? ` <span class="text-accent">${esc(tr('settings.overriding', { option }))}</span>` : ''}</p>
-    </div>`;
-  }).join('');
+// What follows a field's hint. A colour says nothing about the add-on option
+// (it has its own Revert, and Auto needs no explaining); Primary and Background
+// instead show HomePass's built-in colour, faintly, once they are overridden.
+// Every other setting says which add-on option it is overriding.
+function settingNoteHtml(f, entry, option) {
+  if (!entry.overridden) return '';
+  if (f.type !== 'color') return ` <span class="text-accent">${esc(tr('settings.overriding', { option }))}</span>`;
+  const builtIn = BUILT_IN_COLORS[f.key];
+  return builtIn ? ` <span class="opacity-60">${esc(tr('settings.default_color', { color: builtIn }))}</span>` : '';
 }
+
+function settingRowHtml(f, entry) {
+  const option = entry.option === '' || entry.option == null ? tr('settings.empty') : String(entry.option);
+  return `<div>
+    <div class="flex items-center justify-between gap-2 mb-1.5">
+      <label id="set-${f.key}-label" for="set-${f.key}" class="block text-xs font-mono uppercase tracking-wider text-muted${f.type === 'color' && f.optional && (entry.value == null || entry.value === '') ? ' opacity-50' : ''}">${esc(f.label)}</label>
+      ${f.type === 'color' && (!f.optional || entry.overridden) ? `<button type="button" data-action="reset-color" data-key="${esc(f.key)}"
+        class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
+        <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
+      </button>` : entry.overridden ? `<button type="button" data-action="revert-setting" data-key="${esc(f.key)}"
+        class="inline-flex items-center gap-1 text-[11px] font-display font-medium text-accent hover:underline">
+        <span aria-hidden="true" class="material-symbols-outlined text-sm">undo</span> ${esc(tr('settings.revert'))}
+      </button>` : ''}
+    </div>
+    ${settingsInputHtml(f, entry)}
+    <p class="text-[11px] text-muted mt-1">${esc(f.hint)}${settingNoteHtml(f, entry, option)}</p>
+  </div>`;
+}
+
+// The colours: a sample of light and dark mode that stays in view while the
+// fields are edited, then the fields in three groups. The server works out the
+// sample (POST /admin/settings/theme-preview) so the dashboard never
+// reimplements how a blank colour is derived.
+function colorsSectionHtml() {
+  const groups = [['brand', 'settings.colors_brand'], ['light', 'settings.colors_light'], ['dark', 'settings.colors_dark']];
+  const body = groups.map(([g, title]) => {
+    const rows = SETTINGS_FIELDS
+      .filter(f => f.type === 'color' && f.group === g && settingsState[f.key])
+      .map(f => settingRowHtml(f, settingsState[f.key])).join('');
+    return rows ? `<div class="space-y-4"><h4 class="text-sm font-serif">${esc(tr(title))}</h4>${rows}</div>` : '';
+  }).join('');
+  return `<section class="space-y-4 pt-4 border-t border-border-light dark:border-border-dark">
+    <div>
+      <h3 class="text-base font-serif">${esc(tr('settings.colors_title'))}</h3>
+      <p class="text-[11px] text-muted mt-1">${esc(tr('settings.colors_hint'))}</p>
+    </div>
+    <div class="sticky top-0 z-10 py-2 bg-surface-light dark:bg-surface-dark">
+      <div id="theme-preview" class="grid grid-cols-2 gap-2"></div>
+      <ul id="theme-warnings" class="text-[11px] text-primary mt-1.5 space-y-0.5"></ul>
+    </div>
+    ${body}
+  </section>`;
+}
+
+function renderSettings() {
+  let colorsDone = false;
+  document.getElementById('settings-fields').innerHTML = SETTINGS_FIELDS.map(f => {
+    if (f.type === 'color') {
+      if (colorsDone) return '';
+      colorsDone = true;
+      return colorsSectionHtml();
+    }
+    const entry = settingsState[f.key];
+    return entry ? settingRowHtml(f, entry) : '';
+  }).join('');
+  scheduleThemePreview(0);
+}
+
+// ── Colour preview ────────────────────────────────────────────────────
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const safeHex = v => (typeof v === 'string' && HEX_RE.test(v)) ? v : '#808080';
+let themePreviewTimer = null;
+let themePreviewSeq = 0;
+let settingsListenersBound = false;
+
+function previewPanelHtml(mode, c) {
+  const [bg, surface, border, text, muted, primary, onPrimary, accent, secondary] =
+    ['bg', 'surface', 'border', 'text', 'muted', 'primary', 'on_primary', 'accent', 'secondary'].map(k => safeHex(c[k]));
+  const label = tr(mode === 'light' ? 'settings.mode_light' : 'settings.mode_dark');
+  return `<div class="rounded-xl p-2.5 border" style="background:${bg};border-color:${border};color:${text}">
+    <div class="text-[10px] font-mono uppercase tracking-wider mb-1.5" style="color:${muted}">${esc(label)}</div>
+    <div class="rounded-lg p-2 border" style="background:${surface};border-color:${border}">
+      <div class="text-sm font-serif">${esc(tr('settings.preview_heading'))}</div>
+      <div class="text-[11px] mb-2" style="color:${muted}">${esc(tr('settings.preview_muted'))}</div>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="px-2 py-1 rounded-md text-[11px] font-semibold" style="background:${primary};color:${onPrimary}">${esc(tr('settings.preview_button'))}</span>
+        <span class="px-2 py-1 rounded-md text-[11px]" style="background:${accent}26;color:${accent}">${esc(tr('settings.preview_accent'))}</span>
+        <span class="px-2 py-1 rounded-md text-[11px]" style="background:${secondary}26;color:${secondary}">${esc(tr('settings.preview_secondary'))}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// The colours as they stand in the open dialog, saved or not. A blank means
+// Auto for an optional one.
+function currentThemeValues() {
+  const out = {};
+  for (const f of SETTINGS_FIELDS) {
+    if (f.type !== 'color' || !settingsState[f.key]) continue;
+    const el = document.getElementById(`set-${f.key}`);
+    if (!el) continue;
+    const auto = document.getElementById(`set-${f.key}-auto`);
+    out[f.key] = (f.optional && auto && auto.checked) ? '' : el.value.toUpperCase();
+  }
+  return out;
+}
+
+function scheduleThemePreview(delay = 150) {
+  clearTimeout(themePreviewTimer);
+  themePreviewTimer = setTimeout(runThemePreview, delay);
+}
+
+async function runThemePreview() {
+  const values = currentThemeValues();
+  if (!Object.keys(values).length) return;
+  const seq = ++themePreviewSeq;
+  try {
+    const r = await fetch(`${BASE}/admin/settings/theme-preview`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(values),
+    });
+    // A slower reply to an older edit must not overwrite a newer sample.
+    if (!r.ok || seq !== themePreviewSeq) return;
+    drawThemePreview(await r.json());
+  } catch (_) { /* the sample is a courtesy; saving does not depend on it */ }
+}
+
+function drawThemePreview(p) {
+  const box = document.getElementById('theme-preview');
+  if (!box) return;
+  box.innerHTML = previewPanelHtml('light', p.light || {}) + previewPanelHtml('dark', p.dark || {});
+  // An Auto field shows the colour it currently works out to.
+  for (const f of SETTINGS_FIELDS) {
+    if (f.type !== 'color' || !f.optional) continue;
+    const auto = document.getElementById(`set-${f.key}-auto`);
+    const el = document.getElementById(`set-${f.key}`);
+    const resolved = p.resolved && p.resolved[f.key];
+    if (auto && el && auto.checked && HEX_RE.test(resolved || '')) el.value = resolved.toLowerCase();
+  }
+  const modeNames = { light: tr('settings.mode_light'), dark: tr('settings.mode_dark'), both: '' };
+  // Literal keys, not 'settings.warn_' + what: the catalogue check finds keys
+  // by reading the source.
+  const warningText = (what, mode) => {
+    if (what === 'text') return tr('settings.warn_text', { mode });
+    if (what === 'muted') return tr('settings.warn_muted', { mode });
+    if (what === 'separation') return tr('settings.warn_separation', { mode });
+    return tr('settings.warn_button');
+  };
+  const list = document.getElementById('theme-warnings');
+  if (list) {
+    list.innerHTML = (p.warnings || []).map(([mode, what]) =>
+      `<li>${esc(warningText(what, modeNames[mode] || ''))}</li>`).join('');
+  }
+}
+
+function bindSettingsListeners() {
+  if (settingsListenersBound) return;
+  settingsListenersBound = true;
+  const host = document.getElementById('settings-fields');
+  host.addEventListener('input', onColorEvent);
+  host.addEventListener('change', onColorEvent);
+}
+
+const onColorEvent = e => {
+  const t = e.target;
+  if (t.dataset && t.dataset.autoFor) {
+    const lab = document.getElementById(`set-${t.dataset.autoFor}-label`);
+    if (lab) lab.classList.toggle('opacity-50', t.checked);
+    scheduleThemePreview(0);
+  } else if (t.type === 'color') {
+    takeOffAuto(`${t.id}-auto`, `${t.id}-label`);
+    scheduleThemePreview();
+  }
+};
 
 // Only what actually changed is sent, so a save touches nothing the admin did
 // not edit — and so an untouched field never becomes an override just because
@@ -2506,7 +2717,8 @@ function collectSettings() {
       if (!/^\d+$/.test(value.trim())) throw new Error(tr('settings.err_whole', { label: f.label }));
       value = parseInt(value, 10);
     } else if (f.type === 'color') {
-      value = value.toUpperCase();
+      const auto = document.getElementById(`set-${f.key}-auto`);
+      value = (f.optional && auto && auto.checked) ? '' : value.toUpperCase();
     } else {
       value = value.trim();
     }
@@ -2529,6 +2741,7 @@ async function openSettingsModal() {
   if (!r.ok) { showToast(tr('settings.load_failed'), 'error'); return; }
   settingsState = (await r.json()).settings || {};
   document.getElementById('settings-error').textContent = '';
+  bindSettingsListeners();
   renderSettings();
   openModal('settings-modal');
 }
@@ -2906,6 +3119,7 @@ document.addEventListener('click', e => {
     case 'open-settings-modal': openSettingsModal(); break;
     case 'submit-settings': submitSettings(); break;
     case 'revert-setting': revertSetting(el.dataset.key); break;
+    case 'reset-color': resetSettingColor(el.dataset.key); break;
   }
 });
 

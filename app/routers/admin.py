@@ -6,6 +6,7 @@ import re
 import secrets
 import time
 import unicodedata
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -19,6 +20,7 @@ from app import guest_pin
 from app import ha_client
 from app import schedule
 from app import settings_store
+from app import theme
 from app.models import (
     ACCESS_CODE_LABEL_MAX,
     ACCESS_COVER_DEVICE_CLASSES,
@@ -37,6 +39,8 @@ from app.models import (
     SUGGESTION_CATEGORIES,
     SUPPORTED_DOMAINS,
     TEMPLATE_NAME_MAX,
+    THEME_FIELDS,
+    ThemePreviewRequest,
     TokenCreateRequest,
     TokenDeviceBindingRequest,
     TokenInfoRequest,
@@ -47,6 +51,7 @@ from app.models import (
     TokenUpdateExpiryRequest,
 )
 from app.rate_limiter import RateLimiter
+from app.theme import brand_from_settings
 
 router = APIRouter(prefix="/admin")
 
@@ -1046,6 +1051,22 @@ async def update_settings(
     if _guest_page_values() != before:
         await ha_client.broadcast_schedule_changed_all()
     return {"settings": settings_store.snapshot()}
+
+
+@router.post("/settings/theme-preview")
+async def preview_theme(
+    body: ThemePreviewRequest,
+    _: str = Depends(require_admin),
+) -> dict:
+    """Work out the palette for colours that are not saved yet.
+
+    The dashboard calls this as a colour is edited, to draw a light and a dark
+    sample and to show what a blank (automatic) colour currently resolves to.
+    Nothing is stored and no setting changes.
+    """
+    values = {name: getattr(settings, name) for name in THEME_FIELDS}
+    values.update({k: (v or "").upper() for k, v in body.model_dump(exclude_unset=True).items() if v is not None})
+    return theme.preview(brand_from_settings(SimpleNamespace(**values)))
 
 
 @router.delete("/settings/{key}")

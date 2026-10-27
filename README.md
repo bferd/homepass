@@ -29,7 +29,7 @@ installs, just a link.
 - **Scheduled start** — an optional start time; the link can be shared early and shows a countdown until then
 - **Weekly access windows** — limit a link to recurring days and times (overnight windows supported), in Home Assistant's time zone
 - **Single-use links** — a link that stops after one (or N) guest commands; opening it or a chat-app preview never uses it up
-- **Welcome and guest info text** — a welcome message on every guest page and a note per link (door code, parking), in a collapsible top card or a footer box, with simple formatting tags (bold, headings, lists, font colour) and web links, email addresses and phone numbers made tappable
+- **Welcome and guest info text** — a welcome message on every guest page and a note per link (door code, parking), in a collapsible top card or a footer box, with simple formatting tags (bold, headings, lists, font color) and web links, email addresses and phone numbers made tappable
 - **Optional PIN** — a 4–8 digit PIN on top of the link, enforced on every guest endpoint,
   with revocable links that skip it and a per-link choice of whether it is remembered
 - **Single-device lock** — optionally lock a link to the first browser that claims it; other devices are refused
@@ -128,7 +128,8 @@ Set these in **Settings → Add-ons → HomePass → Configuration**:
 | **App Name** | Display name shown to guests | `Home Access` |
 | **Contact Message** | Message shown when a guest link expires | `Please request a new link...` |
 | **Background Color** | Hex color for page background | `#F2F0E9` |
-| **Primary Color** | Hex color for accents and buttons | `#D9523C` |
+| **Primary Color** | Hex color for buttons and highlights | `#D9523C` |
+| **Secondary Color**, **Accent Color**, **Card Color**, **Text Color**, **Dark Background Color**, **Dark Card Color**, **Dark Text Color** | Optional hex colors. Leave blank and each is worked out from the background and primary | blank |
 | **Guest URL** | External base URL for guest links (e.g. `https://guest.myhouse.com`) | — |
 | **Time Zone** | IANA zone for weekly access windows (e.g. `Europe/Madrid`); empty uses Home Assistant's | — |
 | **Home Network Ranges** | Comma-separated CIDRs that count as your home network (e.g. `192.168.1.0/24`). Empty turns home-network-only controls off | — |
@@ -179,7 +180,14 @@ environment variables.
 | `PHONE_REGION` | Two-letter country code for phone numbers in the guest text; unset uses Home Assistant's country, then its time zone. A value that is not a valid two-letter country code is ignored and that automatic lookup is used instead | No | — |
 | `ACCESS_LOG_RETENTION_DAYS` | Days to retain access logs | No | `90` |
 | `BRAND_BG` | Background color (hex) | No | `#F2F0E9` |
-| `BRAND_PRIMARY` | Primary/accent color (hex) | No | `#D9523C` |
+| `BRAND_PRIMARY` | Primary color for buttons and highlights (hex) | No | `#D9523C` |
+| `BRAND_SECONDARY` | Secondary color, used for info buttons and highlights (hex) | No | derived from the primary |
+| `BRAND_ACCENT` | Accent color for small details (hex) | No | derived from the primary |
+| `BRAND_SURFACE` | Card color in light mode (hex) | No | derived from the background |
+| `BRAND_TEXT` | Text color in light mode (hex) | No | derived from the background |
+| `BRAND_DARK_BG` | Page background in dark mode (hex) | No | derived from the background |
+| `BRAND_DARK_SURFACE` | Card color in dark mode (hex) | No | derived from the dark background |
+| `BRAND_DARK_TEXT` | Text color in dark mode (hex) | No | derived from the dark background |
 | `GUEST_URL` | External base URL for guest links | No | — |
 | `TIMEZONE` | IANA zone for weekly access windows; unset uses Home Assistant's | No | — |
 | `LOCAL_NETWORK_CIDRS` | Comma-separated CIDRs that count as the home network | No | — |
