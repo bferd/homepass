@@ -549,7 +549,6 @@ async def update_token_branding(
 @router.post("/tokens/{token_id}/logo")
 async def upload_token_logo(
     token_id: str,
-    request: Request,
     file: Annotated[UploadFile, File()],
     notify: bool = Query(default=True),
     _: str = Depends(require_admin),
@@ -566,12 +565,6 @@ async def upload_token_logo(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot edit the branding of a revoked token",
-        )
-    declared = request.headers.get("content-length", "")
-    if declared.isdigit() and int(declared) > branding.LOGO_MAX_BYTES + branding.LOGO_UPLOAD_SLACK:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=f"The logo must be {branding.LOGO_MAX_BYTES // 1024} KB or smaller.",
         )
     data = await file.read(branding.LOGO_MAX_BYTES + 1)
     try:
