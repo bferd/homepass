@@ -287,10 +287,11 @@ def _muted(text: RGB, bg: RGB, surface: RGB) -> RGB:
 def _derive_accents(primary: RGB, bg_light: RGB, bg_dark: RGB) -> dict[str, RGB]:
     """Secondary and accent colours that go with the primary and read in both modes.
 
-    The accent is the primary's neighbour on the colour wheel and the secondary
-    sits opposite it, which is the usual way to get colours that look chosen
-    together. Both are held to a middle lightness, then checked against the two
-    page backgrounds, because one value has to serve light and dark mode.
+    The accent is the primary's neighbour on the colour wheel. The secondary is a
+    muted tone of the primary's own hue, so it always looks chosen alongside it
+    (a green primary gets a soft grey-green, not its magenta opposite). Both are
+    held to a middle lightness, then checked against the two page backgrounds,
+    because one value has to serve light and dark mode.
     """
     h, _, s = _hls(primary)
     # A grey primary has no hue to rotate, so its derived colours stay neutral.
@@ -310,7 +311,7 @@ def _derive_accents(primary: RGB, bg_light: RGB, bg_dark: RGB) -> dict[str, RGB]
 
     return {
         "accent": pick(h + 0.08, min(sat, 0.75)),
-        "ink": pick(h + 0.5, min(sat, 0.55)),
+        "ink": pick(h, min(sat, 0.30)),
     }
 
 

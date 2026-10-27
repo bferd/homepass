@@ -147,6 +147,18 @@ def test_derived_accent_and_secondary_read_on_both_page_colours():
     assert c["accent"] != c["ink"]
 
 
+@pytest.mark.parametrize("primary", ["#2E7D32", "#1E5AA8", "#7A3E9D", "#E0B400", "#C0392B"])
+def test_derived_secondary_is_a_muted_tone_of_the_primary_hue(primary):
+    import colorsys
+    p = tuple(int(primary[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    ink = tuple(v / 255 for v in resolve(Brand(primary=primary))["ink"])
+    hp, _, sp = colorsys.rgb_to_hls(*p)
+    hs, _, ss = colorsys.rgb_to_hls(*ink)
+    gap = abs(hp - hs)
+    assert min(gap, 1 - gap) < 0.03   # the same hue, so never the primary's opposite
+    assert ss < sp                    # and quieter than the primary
+
+
 def test_button_text_turns_dark_on_a_pale_primary():
     assert resolve(Brand())["on_primary"] == (255, 255, 255)
     assert resolve(Brand(primary="#F5D90A"))["on_primary"] != (255, 255, 255)

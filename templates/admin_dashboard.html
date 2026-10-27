@@ -2364,39 +2364,6 @@ async function resetBrandColor(key) {
   scheduleBrandPreview(0);
 }
 
-// A colour on Auto can still be clicked. Choosing one there is choosing a
-// custom colour, so the field comes off Auto by itself.
-function takeOffAuto(autoId, labelId) {
-  const auto = document.getElementById(autoId);
-  if (!auto || !auto.checked) return;
-  auto.checked = false;
-  const lab = document.getElementById(labelId);
-  if (lab) lab.classList.remove('opacity-50');
-}
-
-const BUILT_IN_COLORS = { brand_primary: '#D9523C', brand_bg: '#F2F0E9' };
-
-// An optional colour goes back to its add-on option: Auto when that is empty,
-// which it is unless the add-on sets one. Like the two above it only moves the
-// field, so the dialog stays open and Save is what stores it.
-function resetSettingColor(key) {
-  const el = document.getElementById(`set-${key}`);
-  if (!el) return;
-  if (BUILT_IN_COLORS[key]) {
-    el.value = BUILT_IN_COLORS[key].toLowerCase();
-  } else {
-    const auto = document.getElementById(`set-${key}-auto`);
-    const entry = settingsState[key];
-    const option = entry && entry.option != null ? String(entry.option) : '';
-    const useAuto = !HEX_RE.test(option);
-    if (!useAuto) el.value = option.toLowerCase();
-    if (auto) auto.checked = useAuto;
-    const lab = document.getElementById(`set-${key}-label`);
-    if (lab) lab.classList.toggle('opacity-50', useAuto);
-  }
-  scheduleThemePreview(0);
-}
-
 function openBrandingCreate() {
   // Work on a copy so Cancel leaves what was already chosen alone.
   const copy = Object.assign({}, createBranding, { colors: Object.assign({}, createBranding.colors) });
@@ -2967,6 +2934,39 @@ async function confirmDelete(id) {
 // The deployment settings that can change while the app runs. The server owns
 // the list (SettingsUpdateRequest) and refuses anything else; this only says
 // how to draw each one. A key the server does not report is not drawn.
+// A colour on Auto can still be clicked. Choosing one there is choosing a
+// custom colour, so the field comes off Auto by itself.
+function takeOffAuto(autoId, labelId) {
+  const auto = document.getElementById(autoId);
+  if (!auto || !auto.checked) return;
+  auto.checked = false;
+  const lab = document.getElementById(labelId);
+  if (lab) lab.classList.remove('opacity-50');
+}
+
+const BUILT_IN_COLORS = { brand_primary: '#D9523C', brand_bg: '#F2F0E9' };
+
+// An optional colour goes back to its add-on option: Auto when that is empty,
+// which it is unless the add-on sets one. Like the two above it only moves the
+// field, so the dialog stays open and Save is what stores it.
+function resetSettingColor(key) {
+  const el = document.getElementById(`set-${key}`);
+  if (!el) return;
+  if (BUILT_IN_COLORS[key]) {
+    el.value = BUILT_IN_COLORS[key].toLowerCase();
+  } else {
+    const auto = document.getElementById(`set-${key}-auto`);
+    const entry = settingsState[key];
+    const option = entry && entry.option != null ? String(entry.option) : '';
+    const useAuto = !HEX_RE.test(option);
+    if (!useAuto) el.value = option.toLowerCase();
+    if (auto) auto.checked = useAuto;
+    const lab = document.getElementById(`set-${key}-label`);
+    if (lab) lab.classList.toggle('opacity-50', useAuto);
+  }
+  scheduleThemePreview(0);
+}
+
 const SETTINGS_FIELDS = [
   { key: 'app_name', label: tr('settings.app_name'), type: 'text', maxlength: 64,
     hint: tr('settings.app_name_hint') },
